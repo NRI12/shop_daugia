@@ -1,0 +1,15 @@
+Flask
+Flask-SQLAlchemy
+Flask-Migrate
+PyMySQL
+Flask 
+Flask-RESTful
+Flask-JWT-Extended
+flasgger
+bcrypt
+Flask-CORS
+Flask-WTF
+marshmallow 
+flask-marshmallow
+pytz
+APScheduler
