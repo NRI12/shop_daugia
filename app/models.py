@@ -5,7 +5,7 @@ class User(db.Model):
     __tablename__ = 'users'
     
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(64), index=True, unique=True)
+    name = db.Column(db.String(64), index=True)
     email = db.Column(db.String(120), index=True, unique=True)
     password = db.Column(db.String(128))
     phone_number = db.Column(db.String(15))
@@ -25,6 +25,7 @@ class Auction(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     start_price = db.Column(db.Float, nullable=False)
     current_price = db.Column(db.Float, default=0)
+    
     end_time = db.Column(db.DateTime, default=datetime.utcnow)
     status = db.Column(db.String(20), default='ongoing')  # pending, completed
 
@@ -59,7 +60,6 @@ class Product(db.Model):
     name = db.Column(db.String(128), nullable=False)
     description = db.Column(db.Text)
     category = db.Column(db.String(64))
-    image_url = db.Column(db.String(256))
     create_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, onupdate=datetime.utcnow)
 
@@ -67,8 +67,23 @@ class Product(db.Model):
     category_id = db.Column(db.Integer, db.ForeignKey('categories.id'), nullable=True)
     auction = db.relationship('Auction', backref='product', uselist=False)
 
+    # Quan hệ một-nhiều với bảng ProductImage
+    images = db.relationship('ProductImage', backref='product', lazy=True)
+
     def __repr__(self):
         return f'<Product {self.name}>'
+
+
+class ProductImage(db.Model):
+    __tablename__ = 'product_images'
+
+    id = db.Column(db.Integer, primary_key=True)
+    url = db.Column(db.String(256), nullable=False)
+    product_id = db.Column(db.Integer, db.ForeignKey('products.id'), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def __repr__(self):
+        return f'<ProductImage {self.url}>'
 
 
 class Category(db.Model):
@@ -76,13 +91,13 @@ class Category(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(128), unique=True, nullable=False)
+    image_url = db.Column(db.String(256))  # Cột mới cho hình ảnh của danh mục
 
     # Quan hệ 1-nhiều với Product
     products = db.relationship('Product', backref='product_category', lazy=True)
 
     def __repr__(self):
         return f'<Category {self.name}>'
-
 
 
 class Transaction(db.Model):

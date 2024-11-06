@@ -20,23 +20,13 @@ def create_app():
     ma.init_app(app)
     Migrate(app, db)
     JWTManager(app)
-    CORS(app)
-    CSRFProtect(app)
+    CORS(app, supports_credentials=True)
+    #CSRFProtect(app)
     scheduler.init_app(app)
+    scheduler.start() 
 
     # Đăng ký blueprint routes
     from app.routes import api_bp
-    app.register_blueprint(api_bp, url_prefix='/api')
+    app.register_blueprint(api_bp)
 
-    # Đăng ký task sau khi ứng dụng đã được tạo
-    from app.scheduler_tasks import close_expired_auctions
-    scheduler.add_job(
-        id='close_expired_auctions',
-        func=close_expired_auctions,
-        trigger='interval',
-        seconds=3  # Chạy mỗi phút
-    )
-    if not scheduler.running:
-        scheduler.init_app(app)
-        scheduler.start()
     return app

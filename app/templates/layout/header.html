@@ -1,0 +1,164 @@
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+<header class="header_area" style="padding: 10px 0; background-color: #f8f9fa; box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);">
+    <div class="classy-nav-container breakpoint-off d-flex align-items-center justify-content-between">
+        <nav class="classy-navbar" id="essenceNav" style="flex: 1; display: flex; align-items: center; justify-content: space-between;">
+            <a class="nav-brand" href="{{ url_for('index') }}" style="max-height: 40px;">
+                <img src="{{ url_for('static', filename='img/core-img/logo.png') }}" alt="">
+            </a>
+            <div class="classy-navbar-toggler" style="display: block;">
+                <span class="navbarToggler"><span></span><span></span><span></span></span>
+            </div>
+            <div class="classy-menu" style="flex: 1; display: flex; justify-content: center;">
+                <div class="classycloseIcon">
+                    <div class="cross-wrap"><span class="top"></span><span class="bottom"></span></div>
+                </div>
+                <div class="classynav">
+                    <ul style="display: flex; align-items: center; gap: 20px; list-style: none; padding: 0; margin: 0;">
+                        <li style="position: relative;">
+                            <a href="/" style="color: #333; text-decoration: none; padding: 10px 15px; font-weight: 500;">Shop</a>
+                        </li>
+                            <div class="megamenu" style="display: none; position: absolute; top: 100%; left: 0; width: 100vw; padding: 20px; background-color: white; box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2); z-index: 999;">
+                                {% for category in categories %}
+                                <div class="single-mega" style="flex: 0 0 25%; box-sizing: border-box; padding: 10px;">
+                                    <div class="title">{{ category.name }}</div>
+                                    <div class="title">
+                                        <img src="{{ category.image_url }}" alt="Hình ảnh danh mục" style="width: 100%; height: 150px; object-fit: cover;">
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </li>
+                        <li><a href="sell-product" style="color: #333; text-decoration: none; padding: 10px 15px; font-weight: 500;">Đăng sản phẩm</a></li>
+                        <li><a href="single-product-details.html" style="color: #333; text-decoration: none; padding: 10px 15px; font-weight: 500;">Đang đấu giá</a></li>
+                        <li><a href="checkout.html" style="color: #333; text-decoration: none; padding: 10px 15px; font-weight: 500;">Thanh toán</a></li>
+                        <li><a href="contact.html" style="color: #333; text-decoration: none; padding: 10px 15px; font-weight: 500;">Liên hệ</a></li>
+                    </ul>
+                </div>
+                <!-- Nav End -->
+            </div>
+        </nav>
+        <div class="header-meta d-flex clearfix justify-content-end" style="display: flex; align-items: center; gap: 15px;">
+            <div class="search-area" style="cursor: pointer;">
+                <form action="#" method="post">
+                    <input type="search" name="search" id="headerSearch" placeholder="Type for search">
+                    <button type="submit"><i class="fa fa-search" aria-hidden="true"></i></button>
+                </form>
+            </div>
+            <div class="favourite-area" style="cursor: pointer;">
+                <img src="{{ url_for('static', filename='img/core-img/heart.svg') }}" alt="Yêu thích" style="width: 20px; height: 20px;">
+            </div>
+            <div class="user-login-info" id="userInfo">
+                <span id="welcomeText" style="display: none;">Welcome!</span>
+                <button id="loginButton" type="button" data-toggle="modal" data-target="#authModal" class="btn btn-link" style="display: inline; outline: none; box-shadow: none; border: none; background: transparent; color: #007bff; cursor: pointer; text-decoration: none;">
+                    Tài khoản
+                </button>
+                <button id="logoutButton" type="button" class="btn btn-link" style="display: none; outline: none; box-shadow: none; border: none; background: transparent; color: #007bff; cursor: pointer; text-decoration: none;">
+                    Đăng xuất
+                </button>
+            </div>
+            <div class="cart-area" id="essenceCartBtn" style="cursor: pointer;">
+                <img src="{{ url_for('static', filename='img/core-img/bag.svg') }}" alt="Giỏ hàng" style="width: 20px; height: 20px;">
+                <span style="color: #333; font-weight: bold; margin-left: 5px;">{{ cart_count }}</span>
+            </div>
+        </div>
+    </div>
+</header>
+<div class="modal fade" id="authModal" tabindex="-1" role="dialog" aria-labelledby="authModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <ul class="nav nav-tabs w-100" role="tablist">
+                    <li class="nav-item">
+                        <a class="nav-link active" id="login-tab" data-toggle="tab" href="#login-panel" role="tab">Đăng Nhập</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" id="register-tab" data-toggle="tab" href="#register-panel" role="tab">Đăng Ký</a>
+                    </li>
+                </ul>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="tab-content">
+                    <!-- Login Form -->
+                    <div class="tab-pane fade show active" id="login-panel" role="tabpanel">
+                        <form id="loginForm" class="auth-form">
+                            <div class="form-group">
+                                <label for="loginEmail">Email</label>
+                                <input type="email" class="form-control" id="loginEmail" name="email" required>
+                                <div class="invalid-feedback">Email không hợp lệ</div>
+                            </div>
+                            <div class="form-group">
+                                <label for="loginPassword">Mật khẩu</label>
+                                <div class="input-group">
+                                    <input type="password" class="form-control" id="loginPassword" name="password" required>
+                                    <div class="input-group-append">
+                                        <button class="btn btn-outline-secondary toggle-password" type="button">
+                                            <i class="fa fa-eye"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="invalid-feedback">Mật khẩu phải có ít nhất 6 ký tự</div>
+                            </div>
+                            <div class="form-group">
+                                <div class="custom-control custom-checkbox">
+                                    <input type="checkbox" class="custom-control-input" id="rememberMe">
+                                    <label class="custom-control-label" for="rememberMe">Ghi nhớ đăng nhập</label>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-primary btn-block">Đăng Nhập</button>
+                        </form>
+                    </div>
+                    
+                    <!-- Register Form -->
+                    <div class="tab-pane fade" id="register-panel" role="tabpanel">
+                        <form id="registerForm" class="auth-form">
+                            <div class="form-group">
+                                <label for="registerName">Họ và tên</label>
+                                <input type="text" class="form-control" id="registerName" name="name" required>
+                                <div class="invalid-feedback">Vui lòng nhập họ tên</div>
+                            </div>
+                            <div class="form-group">
+                                <label for="registerEmail">Email</label>
+                                <input type="email" class="form-control" id="registerEmail" name="email" required>
+                                <div class="invalid-feedback">Email không hợp lệ</div>
+                            </div>
+                            <div class="form-group">
+                                <label for="registerPhone">Số điện thoại</label>
+                                <input type="tel" class="form-control" id="registerPhone" name="phone_number" required>
+                                <div class="invalid-feedback">Số điện thoại không hợp lệ</div>
+                            </div>
+                            <div class="form-group">
+                                <label for="registerPassword">Mật khẩu</label>
+                                <div class="input-group">
+                                    <input type="password" class="form-control" id="registerPassword" name="password" required>
+                                    <div class="input-group-append">
+                                        <button class="btn btn-outline-secondary toggle-password" type="button">
+                                            <i class="fa fa-eye"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="invalid-feedback">Mật khẩu phải có ít nhất 6 ký tự</div>
+                            </div>
+                            <div class="form-group">
+                                <label for="confirmPassword">Xác nhận mật khẩu</label>
+                                <div class="input-group">
+                                    <input type="password" class="form-control" id="confirmPassword" required>
+                                    <div class="input-group-append">
+                                        <button class="btn btn-outline-secondary toggle-password" type="button">
+                                            <i class="fa fa-eye"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="invalid-feedback">Mật khẩu không khớp</div>
+                            </div>
+                            <button type="submit" class="btn btn-primary btn-block">Đăng Ký</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>

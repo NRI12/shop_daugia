@@ -1,58 +1,138 @@
-from flask import Blueprint, request, jsonify
-from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
-from app.models import User, Auction, Bid, Transaction, Notification, db, Category, Product
-from datetime import datetime
+import os
+from flask import Blueprint, app, request, jsonify, render_template
+from flask_jwt_extended import (
+    create_access_token, jwt_required, get_jwt_identity,
+    unset_jwt_cookies, set_access_cookies
+)
+from app.models import User, Auction, Bid, Transaction, Notification, db, Category, Product,ProductImage
+from datetime import datetime, timedelta
 import bcrypt
 from app.schemas import UserSchema, LoginSchema, AuctionSchema, BidSchema
 from marshmallow import ValidationError
 import pytz
 from datetime import datetime
+from werkzeug.utils import secure_filename
+from flask import current_app as app
 
-api_bp = Blueprint('api', __name__)
-
+api_bp = Blueprint('', __name__)
 def get_current_time_in_vietnam():
-    """Lấy thời gian hiện tại theo giờ Việt Nam và loại bỏ timezone."""
     vn_tz = pytz.timezone('Asia/Ho_Chi_Minh')
-    vn_time = datetime.now(vn_tz)  # Thời gian với timezone GMT+7
-    return vn_time.replace(tzinfo=None)  # Loại bỏ timezone
+    vn_time = datetime.now(vn_tz)
+    return vn_time.replace(tzinfo=None)
+
 def validate_input(schema, data):
-    """Hàm tiện ích để xác thực đầu vào"""
     try:
         schema.load(data)
     except ValidationError as err:
         return jsonify({"errors": err.messages}), 400
 
+@api_bp.route('/', methods=['GET'])
+def index():
+    categories = Category.query.all()
+    # Lấy các phiên đấu giá mới nhất, sắp xếp theo ID giảm dần
+    latest_auctions = Auction.query.filter(Auction.end_time > datetime.utcnow()).order_by(Auction.id.desc()).limit(10).all()
+    return render_template('index.html', categories=categories, latest_auctions=latest_auctions)
+
+
 # 1. Đăng nhập và lấy JWT
 @api_bp.route('/login', methods=['POST'])
 def login():
-    data = request.json
-    validation_result = validate_input(LoginSchema(), data)
-    if validation_result:
-        return validation_result
+    data = request.get_json()
+    if not data:
+        return jsonify({"message": "No data provided"}), 400
+    
+    try:
+        validated_data = LoginSchema().load(data)
+    except ValidationError as err:
+        return jsonify({"errors": err.messages}), 400
+    
+    user = User.query.filter_by(email=validated_data['email']).first()
+    if not user or not bcrypt.checkpw(validated_data['password'].encode('utf-8'), 
+                                    user.password.encode('utf-8')):
+        return jsonify({"message": "Sai tài khoản hoặc mật khẩu"}), 401
+    
+    access_token = create_access_token(
+        identity=user.id,
+        expires_delta=timedelta(days=30)
+    )
+    
+    response = jsonify({
+        "message": "Login successful",
+        "user": {
+            "email": user.email
+        }
+    })
+    
+    set_access_cookies(
+        response, 
+        access_token,
+        max_age=30*24*60*60
+    )
+    
+    return response, 200
 
-    user = User.query.filter_by(email=data['email']).first()
-    if not user or not bcrypt.checkpw(data['password'].encode('utf-8'), user.password.encode('utf-8')):
-        return jsonify({"message": "Invalid credentials"}), 401
+@api_bp.route('/check-auth', methods=['GET'])
+@jwt_required(optional=True)
+def check_auth():
+    current_user_id = get_jwt_identity()
+    
+    if current_user_id is None:
+        return jsonify({"authenticated": False, "message": "User not logged in"}), 200
 
-    access_token = create_access_token(identity=user.id)
-    return jsonify({'access_token': access_token}), 200
+    user = User.query.get(current_user_id)
+    if not user:
+        return jsonify({"message": "User not found"}), 404
+
+    return jsonify({
+        "authenticated": True,
+        "user": {
+            "email": user.email
+        }
+    }), 200
+
+@api_bp.route('/logout', methods=['POST'])
+def logout():
+    response = jsonify({"message": "Logout successful"})
+    unset_jwt_cookies(response)
+    return response, 200
+
 # 2. Đăng ký tài khoản người dùng
 @api_bp.route('/register', methods=['POST'])
 def register():
-    data = request.json
+    data = request.get_json()
+    
+    # Validate input
     validation_result = validate_input(UserSchema(), data)
     if validation_result:
         return validation_result
+        
+    # Check if user already exists
+    if User.query.filter_by(email=data['email']).first():
+        return jsonify({
+            "message": "Email đã được sử dụng"
+        }), 409
 
-    hashed_password = bcrypt.hashpw(data['password'].encode('utf-8'), bcrypt.gensalt())
+    # Hash password
+    hashed_password = bcrypt.hashpw(
+        data['password'].encode('utf-8'), 
+        bcrypt.gensalt()
+    ).decode('utf-8')
+    
+    # Create new user
     new_user = User(
-        name=data['name'], email=data['email'], 
-        password=hashed_password.decode('utf-8'), 
-        phone_number=data.get('phone_number', '')
+        name=data['name'],
+        email=data['email'],
+        password=hashed_password,
+        phone_number=data.get('phone_number', ''),
+        role='user'  # Thêm role nếu cần
     )
+    
     db.session.add(new_user)
     db.session.commit()
-    return jsonify({"message": "User created successfully"}), 201
+
+    # Trả về phản hồi sau khi đăng ký thành công
+    return jsonify({"message": "Đăng ký thành công!"}), 201
+
 @api_bp.route('/categories', methods=['POST'])
 @jwt_required()
 def create_category():
@@ -65,79 +145,113 @@ def create_category():
     db.session.commit()
     return jsonify({"message": "Category created successfully", "category_id": category.id}), 201
 
-# 3. Lấy danh sách các phiên đấu giá
-@api_bp.route('/auctions', methods=['POST'])
+
+@api_bp.route('/sell-product', methods=['GET'])
 @jwt_required()
-def create_product_and_auction():
-    user_id = get_jwt_identity()
-    data = request.json
-
-    # Kiểm tra xem danh mục có tồn tại không
-    category = Category.query.get(data.get('category_id'))
-    if not category:
-        return jsonify({"message": "Category not found"}), 404
-
-    # Tạo sản phẩm mới
-    product = Product(
-        name=data['product_name'],
-        description=data.get('description', ''),
-        image_url=data.get('image_url', ''),
-        category_id=category.id
-    )
-    db.session.add(product)
-    db.session.flush()  # Đảm bảo product.id được tạo trước khi tiếp tục
-
-    # Tạo phiên đấu giá liên kết với sản phẩm vừa tạo
-    auction = Auction(
-        product_id=product.id,
-        start_price=data['start_price'],
-        current_price=data['start_price'],
-        end_time=datetime.strptime(data['end_time'], '%Y-%m-%d %H:%M:%S'),
-        seller_id=user_id
-    )
-    db.session.add(auction)
-    db.session.commit()
-
-    return jsonify({
-        "message": "Product and auction created successfully",
-        "product_id": product.id,
-        "auction_id": auction.id
-    }), 201
-
-# 4. Lấy thông tin chi tiết của một phiên đấu giá
-@api_bp.route('/auctions/<int:auction_id>', methods=['GET'])
-def get_auction(auction_id):
+def sell_product():
+    # Lấy danh sách danh mục
+    categories = Category.query.all()
+    return render_template('create_auction.html', categories=categories)
+@api_bp.route('/product/<int:auction_id>', methods=['GET'])
+def product_details(auction_id):
     auction = Auction.query.get_or_404(auction_id)
-    return jsonify({
-        'id': auction.id,
-        'title': auction.title,
-        'description': auction.description,
-        'current_price': auction.current_price,
-        'end_time': auction.end_time,
-        'status': auction.status
-    }), 200
+    return render_template('product_details.html', auction=auction)
 
 # 5. Tạo phiên đấu giá mới
 @api_bp.route('/auctions', methods=['POST'])
 @jwt_required()
-def create_auction():
-    user_id = get_jwt_identity()
-    data = request.json
-    validation_result = validate_input(AuctionSchema(), data)
-    if validation_result:
-        return validation_result
+def create_product_and_auction():
+    try:
+        user_id = get_jwt_identity()
+        data = request.form
 
-    auction = Auction(
-        title=data['title'], description=data.get('description', ''),
-        start_price=data['start_price'], 
-        current_price=data['start_price'], 
-        end_time=datetime.strptime(data['end_time'], '%Y-%m-%d %H:%M:%S'), 
-        seller_id=user_id
-    )
-    db.session.add(auction)
-    db.session.commit()
-    return jsonify({"message": "Auction created successfully"}), 201
+        # Kiểm tra dữ liệu đầu vào
+        required_fields = ['product_name', 'category_id', 'start_price', 'end_time']
+        for field in required_fields:
+            if field not in data or not data[field]:
+                return jsonify({"message": f"{field} is required"}), 400
 
+        # Chuyển đổi category_id thành số nguyên
+        try:
+            category_id = int(data.get('category_id'))
+        except ValueError:
+            return jsonify({"message": "Invalid category_id"}), 400
+
+        # Kiểm tra xem danh mục có tồn tại không
+        category = Category.query.get(category_id)
+        if not category:
+            return jsonify({"message": "Category not found"}), 404
+
+        # Tạo sản phẩm mới
+        product = Product(
+            name=data['product_name'],
+            description=data.get('description', ''),
+            category_id=category.id
+        )
+        db.session.add(product)
+        db.session.flush()  # Đảm bảo product.id được tạo trước khi tiếp tục
+
+        # Xử lý hình ảnh nếu có
+        if 'product_images' in request.files:
+            images = request.files.getlist('product_images')
+            for image_file in images:
+                if image_file.filename != '':
+                    filename = secure_filename(image_file.filename)
+                    # Tạo đường dẫn lưu trữ tệp
+                    image_folder = os.path.join(app.root_path, 'static', 'uploads', 'products')
+                    os.makedirs(image_folder, exist_ok=True)
+                    file_path = os.path.join(image_folder, filename)
+                    image_file.save(file_path)
+
+                   # Lưu đường dẫn hình ảnh vào bảng ProductImage
+                    relative_path = os.path.join('uploads', 'products', filename).replace("\\", "/")
+                    product_image = ProductImage(
+                        url=relative_path,
+                        product_id=product.id
+                    )
+                    db.session.add(product_image)
+
+
+        # Chuyển đổi end_time thành đối tượng datetime
+        try:
+            end_time_str = data['end_time']
+            end_time_format = '%Y-%m-%d %H:%M:%S'
+            end_time = datetime.strptime(end_time_str, end_time_format)
+        except ValueError:
+            return jsonify({"message": "Invalid end_time format. Use 'YYYY-MM-DD HH:MM:SS'"}), 400
+
+        # Kiểm tra xem end_time có lớn hơn thời gian hiện tại không
+        if end_time <= datetime.utcnow():
+            return jsonify({"message": "End time must be in the future"}), 400
+
+        # Chuyển đổi start_price thành float
+        try:
+            start_price = float(data['start_price'])
+        except ValueError:
+            return jsonify({"message": "Invalid start_price"}), 400
+
+        # Tạo phiên đấu giá liên kết với sản phẩm vừa tạo
+        auction = Auction(
+            product_id=product.id,
+            start_price=start_price,
+            current_price=start_price,
+            end_time=end_time,
+            seller_id=user_id
+        )
+        db.session.add(auction)
+        db.session.commit()
+
+        return jsonify({
+            "message": "Product and auction created successfully",
+            "product_id": product.id,
+            "auction_id": auction.id
+        }), 201
+
+    except Exception as e:
+        app.logger.error(f"Error in create_product_and_auction: {e}")
+
+        # Ghi log lỗi
+        return jsonify({"message": "Internal server error"}), 500
 # 6. Đặt giá thầu
 @api_bp.route('/bids', methods=['POST'])
 @jwt_required()

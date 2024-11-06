@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <!-- Meta và tiêu đề -->
+    <meta charset="UTF-8">
+    <title>Chi tiết đấu giá - {{ auction.product.name }}</title>
+    <!-- Favicon -->
+    <link rel="icon" href="{{ url_for('static', filename='img/core-img/favicon.ico') }}">
+    <!-- CSS Bootstrap -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet">
+    <!-- CSS tùy chỉnh -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/core-style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <!-- Thêm CSS tùy chỉnh -->
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+        }
+
+        .product-details {
+            margin-top: 100px; /* Tăng khoảng cách trên */
+            margin-bottom: 50px;
+        }
+
+        .carousel-inner {
+            width: 100%;
+            /* Xóa max-height để không giới hạn chiều cao */
+            overflow: hidden;
+        }
+
+        .carousel-item img {
+            width: 100%;
+            height: auto; /* Đảm bảo hình ảnh giữ tỷ lệ */
+            object-fit: cover;
+        }
+
+        .product-info {
+            padding: 20px;
+        }
+
+        .product-info h3 {
+            font-size: 28px;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+
+        .product-info .text-muted {
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+
+        .product-info .product-price {
+            font-size: 22px;
+            color: #e74c3c;
+            margin-bottom: 20px;
+        }
+
+        .product-info .product-desc {
+            font-size: 16px;
+            margin-bottom: 20px;
+        }
+
+        .product-info .end-time {
+            font-size: 16px;
+            font-weight: bold;
+            color: #2980b9;
+            margin-bottom: 20px;
+        }
+
+        .product-info label {
+            font-weight: bold;
+        }
+
+        .product-info .btn-bid {
+            background-color: #e74c3c;
+            color: #fff;
+            padding: 10px 20px;
+            font-size: 16px;
+        }
+
+        .product-info .btn-bid:hover {
+            background-color: #c0392b;
+            color: #fff;
+        }
+
+        #bidMessage {
+            margin-top: 15px;
+            font-size: 16px;
+        }
+    </style>
+</head>
+
+<body>        
+    </div>
+    {% include 'layout/header.html' %}
+
+    <!-- ##### Chi tiết sản phẩm ##### -->
+    <!-- Thay đổi 'container' thành 'container-fluid' -->
+    <div class="container-fluid product-details mt-5">
+        <div class="row">
+            <!-- Hình ảnh sản phẩm -->
+            <div class="col-md-6">
+                <div id="productCarousel" class="carousel slide" data-ride="carousel">
+                    {% if auction.product.images|length > 1 %}
+                    <!-- Indicators -->
+                    <ol class="carousel-indicators">
+                        {% for idx in range(auction.product.images|length) %}
+                        <li data-target="#productCarousel" data-slide-to="{{ idx }}" class="{% if idx == 0 %}active{% endif %}"></li>
+                        {% endfor %}
+                    </ol>
+                    {% endif %}
+                    <div class="carousel-inner">
+                        {% set first_image = true %}
+                        {% for image in auction.product.images %}
+                        <div class="carousel-item {% if first_image %}active{% endif %}">
+                            <img src="{{ url_for('static', filename=image.url) }}" alt="{{ auction.product.name }}" class="d-block w-100">
+                        </div>
+                        {% set first_image = false %}
+                        {% else %}
+                        <!-- Nếu không có hình ảnh, hiển thị hình ảnh mặc định -->
+                        <div class="carousel-item active">
+                            <img src="{{ url_for('static', filename='img/product-img/no-image.png') }}" alt="No Image" class="d-block w-100">
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% if auction.product.images|length > 1 %}
+                    <!-- Điều khiển trái/phải -->
+                    <a class="carousel-control-prev" href="#productCarousel" role="button" data-slide="prev">
+                        <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                        <span class="sr-only">Trước</span>
+                    </a>
+                    <a class="carousel-control-next" href="#productCarousel" role="button" data-slide="next">
+                        <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                        <span class="sr-only">Sau</span>
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Thông tin sản phẩm -->
+            <div class="col-md-6 product-info">
+                <h3>{{ auction.product.name }}</h3>
+                <p class="text-muted">Danh mục: {{ auction.product.category.name }}</p>
+                <p class="product-price">
+                    Giá khởi điểm: {{ auction.start_price }} VND<br>
+                    Giá hiện tại: <span id="current_price">{{ auction.current_price or auction.start_price }}</span> VND
+                </p>
+                <p class="product-desc">{{ auction.product.description }}</p>
+                <p class="end-time">Thời gian kết thúc: {{ auction.end_time.strftime('%d/%m/%Y %H:%M') }}</p>
+
+                <!-- Form đặt giá thầu -->
+                <form id="bidForm">
+                    <div class="form-group">
+                        <label for="bid_amount">Số tiền đặt thầu:</label>
+                        <!-- Loại bỏ thuộc tính 'min' -->
+                        <input type="number" class="form-control" id="bid_amount" step="1000" placeholder="Nhập số tiền đặt thầu">
+                    </div>
+                    <button type="submit" class="btn btn-bid">Đặt giá thầu</button>
+                </form>
+                <!-- Thông báo -->
+                <div id="bidMessage"></div>
+            </div>
+        </div>
+    </div>
+    <!-- ##### Chi tiết sản phẩm End ##### -->
+
+    <!-- Nhúng tệp JavaScript -->
+    <!-- jQuery và Bootstrap JS -->
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <!-- Sử dụng bootstrap.bundle.min.js để bao gồm Popper.js -->
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.bundle.min.js"></script>
+    <!-- Nhúng tệp JavaScript chính của bạn -->
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <!-- Thêm script xử lý -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // Kiểm tra xem người dùng đã đăng nhập chưa
+            checkAuthStatus();
+
+            // Xử lý sự kiện submit form đặt giá thầu
+            const bidForm = document.getElementById('bidForm');
+            bidForm.addEventListener('submit', async function (e) {
+                e.preventDefault();
+
+                // Lấy số tiền đặt thầu
+                const bidAmount = parseFloat(document.getElementById('bid_amount').value);
+                const auctionId = {{ auction.id | tojson }};
+                const currentPrice = parseFloat(document.getElementById('current_price').innerText);
+
+                if (isNaN(bidAmount) || bidAmount <= currentPrice || bidAmount < 0) {
+                    showMessage('Vui lòng nhập số tiền lớn hơn giá hiện tại và không âm.', 'error');
+                    return;
+                }
+
+                // Tạo dữ liệu gửi đến server
+                const data = {
+                    auction_id: auctionId,
+                    amount: bidAmount
+                };
+
+                try {
+                    const response = await fetch('/bids', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': 'Bearer ' + localStorage.getItem('access_token')
+                        },
+                        body: JSON.stringify(data)
+                    });
+
+                    const result = await response.json();
+
+                    if (response.ok) {
+                        showMessage('Đặt giá thầu thành công!', 'success');
+                        // Cập nhật giá hiện tại trên trang
+                        document.getElementById('current_price').innerText = bidAmount;
+                        // Xóa giá trị trong ô nhập
+                        document.getElementById('bid_amount').value = '';
+                    } else {
+                        showMessage(result.message || 'Đặt giá thầu thất bại!', 'error');
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    showMessage('Có lỗi xảy ra. Vui lòng thử lại sau.', 'error');
+                }
+            });
+
+            function showMessage(message, type) {
+                const bidMessage = document.getElementById('bidMessage');
+                bidMessage.innerHTML = message;
+                bidMessage.style.color = type === 'success' ? 'green' : 'red';
+            }
+        });
+    </script>
+</body>
+
+</html>

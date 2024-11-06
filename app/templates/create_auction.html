@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <!-- Thay đổi tiêu đề trang -->
+    <title>Đăng bán sản phẩm</title>
+
+    <!-- Favicon  -->
+    <link rel="icon" href="{{ url_for('static', filename='img/core-img/favicon.ico') }}">
+
+    <!-- Core Style CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/core-style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
+    <!-- Thêm Bootstrap CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+
+    <!-- Thêm font-awesome cho icon -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.1/css/all.min.css">
+
+    <!-- Thêm CSS cho drag-and-drop image upload -->
+    <style>
+        .image-upload-container {
+            width: 100%;
+            height: 200px;
+            border: 2px dashed #ccc;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            cursor: pointer;
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+
+        .image-upload-container:hover {
+            background-color: #f9f9f9;
+        }
+
+        .image-upload-container input[type="file"] {
+            display: none;
+        }
+
+        .image-upload-placeholder {
+            text-align: center;
+            color: #ccc;
+        }
+
+        .image-upload-placeholder i {
+            font-size: 48px;
+            margin-bottom: 10px;
+        }
+
+        /* Cập nhật CSS cho hình ảnh đại diện */
+        #thumbnailImage {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            cursor: pointer;
+        }
+
+        /* CSS cho modal full-screen */
+        .modal-dialog {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+        }
+
+        .modal-content {
+            height: 100%;
+            border: none;
+            border-radius: 0;
+        }
+
+        .modal-body {
+            padding: 0;
+        }
+
+        .carousel-item img {
+            max-height: 100vh;
+            width: auto;
+            margin: auto;
+            object-fit: contain;
+        }
+
+        /* CSS cho nút điều khiển carousel */
+        .carousel-control-prev-icon,
+        .carousel-control-next-icon {
+            background: none;
+            font-size: 30px;
+            width: 30px;
+            height: 30px;
+        }
+
+        .carousel-control-prev-icon:after {
+            content: '<';
+            color: black;
+        }
+
+        .carousel-control-next-icon:after {
+            content: '>';
+            color: black;
+        }
+    </style>
+</head>
+
+<body>
+
+    {% include 'layout/header.html' %}
+
+    <!-- ##### Đăng bán sản phẩm Area Start ##### -->
+    <div class="checkout_area section-padding-80">
+        <div class="container">
+            <div class="row justify-content-center">
+
+                <div class="col-12 col-md-8">
+                    <div class="checkout_details_area mt-50 clearfix">
+
+                        <div class="cart-page-heading mb-30">
+                            <h5>Đăng bán sản phẩm</h5>
+                        </div>
+
+                        <form id="sellProductForm" enctype="multipart/form-data">
+                            <div class="row">
+                                <!-- Tên sản phẩm -->
+                                <div class="col-12 mb-3">
+                                    <label for="product_name">Tên sản phẩm <span>*</span></label>
+                                    <input type="text" class="form-control" id="product_name" name="product_name" required>
+                                </div>
+
+                                <!-- Mô tả sản phẩm -->
+                                <div class="col-12 mb-3">
+                                    <label for="description">Mô tả sản phẩm</label>
+                                    <textarea class="form-control" id="description" name="description" rows="5"></textarea>
+                                </div>
+
+                                <!-- Hình ảnh sản phẩm -->
+                                <div class="col-12 mb-3">
+                                    <label for="product_image">Hình ảnh sản phẩm</label>
+                                    <div class="image-upload-container" id="imageUploadContainer">
+                                        <input type="file" id="product_image" name="product_image" accept="image/*" multiple>
+                                        <div class="image-upload-placeholder" id="imageUploadPlaceholder">
+                                            <i class="fa fa-plus"></i>
+                                            <p>Kéo và thả hình vào đây hoặc nhấn để chọn</p>
+                                        </div>
+                                        <!-- Hình ảnh đại diện -->
+                                        <img id="thumbnailImage" src="#" alt="Thumbnail Image" style="display: none;">
+                                    </div>
+                                </div>
+
+                                <!-- Danh mục sản phẩm -->
+                                <div class="col-12 mb-3">
+                                    <label for="category_id">Danh mục <span>*</span></label>
+                                    <select class="w-100 form-control" id="category_id" name="category_id" required>
+                                        {% for category in categories %}
+                                        <option value="{{ category.id }}">{{ category.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+
+                                <!-- Giá khởi điểm -->
+                                <div class="col-12 mb-3">
+                                    <label for="start_price">Giá khởi điểm <span>*</span></label>
+                                    <input type="number" class="form-control" id="start_price" name="start_price" min="0" required>
+                                </div>
+
+                                <!-- Thời gian kết thúc -->
+                                <div class="col-12 mb-3">
+                                    <label for="end_time">Thời gian kết thúc <span>*</span></label>
+                                    <input type="datetime-local" class="form-control" id="end_time" name="end_time" required>
+                                </div>
+
+                                <!-- Nút đăng bán -->
+                                <div class="col-12">
+                                    <button type="submit" class="btn essence-btn">Đăng bán sản phẩm</button>
+                                </div>
+                            </div>
+                        </form>
+
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+    <!-- ##### Đăng bán sản phẩm Area End ##### -->
+
+    <!-- Modal để hiển thị hình ảnh -->
+    <div class="modal fade" id="imageModal" tabindex="-1" role="dialog" aria-labelledby="imageModalLabel"
+        aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content">
+                <div class="modal-body">
+                    <!-- Carousel để hiển thị hình ảnh -->
+                    <div id="imageCarousel" class="carousel slide" data-ride="carousel">
+                        <div class="carousel-inner" id="carouselInner">
+                            <!-- Các hình ảnh sẽ được thêm vào đây bằng JavaScript -->
+                        </div>
+                        <!-- Điều khiển trái/phải -->
+                        <a class="carousel-control-prev" href="#imageCarousel" role="button" data-slide="prev">
+                            <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                            <span class="sr-only">Trước</span>
+                        </a>
+                        <a class="carousel-control-next" href="#imageCarousel" role="button" data-slide="next">
+                            <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                            <span class="sr-only">Sau</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Nhúng tệp JavaScript -->
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+
+    <!-- Thêm thư viện dayjs -->
+    <script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
+
+    <!-- Thêm jQuery và Bootstrap JS -->
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.min.js"></script>
+
+    <!-- Thêm thư viện Panzoom -->
+    <script src="https://unpkg.com/@panzoom/panzoom@9.4.0/dist/panzoom.min.js"></script>
+
+    <!-- Thêm đoạn script xử lý form -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // Kiểm tra xem người dùng đã đăng nhập chưa
+            checkAuthStatus();
+
+            // Xử lý sự kiện kéo thả hình ảnh
+            const imageUploadContainer = document.getElementById('imageUploadContainer');
+            const productImageInput = document.getElementById('product_image');
+            const imageUploadPlaceholder = document.getElementById('imageUploadPlaceholder');
+            const thumbnailImage = document.getElementById('thumbnailImage');
+
+            let imageFiles = [];
+
+            imageUploadContainer.addEventListener('click', function () {
+                productImageInput.click();
+            });
+
+            // Ngăn chặn hành vi mặc định khi kéo thả
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                imageUploadContainer.addEventListener(eventName, preventDefaults, false)
+            });
+
+            function preventDefaults(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+
+            // Thêm class khi kéo file vào
+            ['dragenter', 'dragover'].forEach(eventName => {
+                imageUploadContainer.addEventListener(eventName, () => {
+                    imageUploadContainer.classList.add('highlight');
+                }, false)
+            });
+
+            ['dragleave', 'drop'].forEach(eventName => {
+                imageUploadContainer.addEventListener(eventName, () => {
+                    imageUploadContainer.classList.remove('highlight');
+                }, false)
+            });
+
+            imageUploadContainer.addEventListener('drop', handleDrop, false);
+
+            function handleDrop(e) {
+                const dt = e.dataTransfer;
+                const files = dt.files;
+
+                handleFiles(files);
+            }
+
+            productImageInput.addEventListener('change', function () {
+                handleFiles(this.files);
+            });
+
+            function handleFiles(files) {
+                // Lưu trữ các tệp hình ảnh
+                imageFiles = Array.from(files);
+
+                if (imageFiles.length > 0) {
+                    const firstFile = imageFiles[0];
+                    if (firstFile.type.startsWith('image/')) {
+                        const reader = new FileReader();
+                        reader.readAsDataURL(firstFile);
+                        reader.onloadend = function () {
+                            // Hiển thị hình ảnh đại diện
+                            thumbnailImage.src = reader.result;
+                            thumbnailImage.style.display = 'block';
+                            imageUploadPlaceholder.style.display = 'none';
+                        }
+                    } else {
+                        alert('Vui lòng chỉ chọn các tệp hình ảnh.');
+                    }
+                } else {
+                    // Nếu không có hình ảnh nào, hiển thị lại placeholder
+                    imageUploadPlaceholder.style.display = 'block';
+                    thumbnailImage.style.display = 'none';
+                }
+            }
+
+            // Khi nhấn vào hình ảnh đại diện, mở modal và hiển thị carousel
+            thumbnailImage.addEventListener('click', function (event) {
+            event.stopPropagation(); // Ngăn chặn sự kiện lan truyền lên cha
+
+            // Xóa nội dung cũ của carousel
+            const carouselInner = document.getElementById('carouselInner');
+            carouselInner.innerHTML = '';
+
+            let loadedImages = 0;
+            const totalImages = imageFiles.length;
+
+            if (totalImages === 0) {
+                alert('Không có hình ảnh để hiển thị.');
+                return;
+            }
+
+            imageFiles.forEach((file, index) => {
+                if (file.type.startsWith('image/')) {
+                    const reader = new FileReader();
+                    reader.readAsDataURL(file);
+                    reader.onloadend = function () {
+                        // Tạo carousel item
+                        const carouselItem = document.createElement('div');
+                        carouselItem.classList.add('carousel-item');
+                        if (index === 0) {
+                            carouselItem.classList.add('active');
+                        }
+
+                        const img = document.createElement('img');
+                        img.src = reader.result;
+                        img.classList.add('d-block', 'w-100');
+
+                        // Thêm panzoom cho hình ảnh
+                        img.onload = function () {
+                            Panzoom(img, {
+                                maxScale: 5,
+                                minScale: 1
+                            });
+                        };
+
+                        carouselItem.appendChild(img);
+                        carouselInner.appendChild(carouselItem);
+
+                        loadedImages++;
+
+                        // Khi tất cả hình ảnh đã được tải, hiển thị modal
+                        if (loadedImages === totalImages) {
+                            $('#imageModal').modal('show');
+                        }
+                    }
+                } else {
+                    loadedImages++;
+
+                    // Nếu tệp không phải hình ảnh, vẫn kiểm tra xem đã tải xong hết chưa
+                    if (loadedImages === totalImages) {
+                        $('#imageModal').modal('show');
+                    }
+                }
+            });
+        });
+
+            // Xử lý sự kiện submit form đăng bán sản phẩm
+            document.getElementById('sellProductForm').addEventListener('submit', async function (e) {
+                e.preventDefault();
+
+                // Lấy dữ liệu từ form
+                const formData = new FormData();
+
+                formData.append('product_name', document.getElementById('product_name').value);
+                formData.append('description', document.getElementById('description').value);
+                formData.append('category_id', document.getElementById('category_id').value);
+                formData.append('start_price', parseFloat(document.getElementById('start_price').value));
+
+                // Sử dụng dayjs để định dạng thời gian
+                const endTimeInput = document.getElementById('end_time').value;
+                const endTimeFormatted = dayjs(endTimeInput).format('YYYY-MM-DD HH:mm:ss');
+
+                // Kiểm tra thời gian kết thúc
+                if (!isValidEndTime(endTimeInput)) {
+                    alert('Thời gian kết thúc phải lớn hơn thời gian hiện tại.');
+                    return;
+                }
+
+                formData.append('end_time', endTimeFormatted);
+
+                // Thêm hình ảnh nếu có
+                for (let i = 0; i < imageFiles.length; i++) {
+                    formData.append('product_images', imageFiles[i]);
+                }
+
+                try {
+                    const response = await fetch('/auctions', {
+                        method: 'POST',
+                        credentials: 'include',
+                        body: formData
+                    });
+
+                    let data;
+                    try {
+                        data = await response.json();
+                    } catch (err) {
+                        data = null;
+                    }
+
+                    if (response.ok) {
+                        showToast('success', 'Đăng bán sản phẩm thành công!');
+                        // Chuyển hướng hoặc làm mới trang
+                        window.location.href = '/'; // Chuyển về trang chủ hoặc trang khác
+                    } else {
+                        const errorMessage = data && data.message ? data.message : 'Đăng bán sản phẩm thất bại!';
+                        showToast('error', errorMessage);
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    showToast('error', 'Có lỗi xảy ra. Vui lòng thử lại sau.');
+                }
+            });
+
+            function isValidEndTime(endTime) {
+                const now = dayjs();
+                const end = dayjs(endTime);
+                return end.isAfter(now);
+            }
+        });
+    </script>
+
+</body>
+
+</html>
