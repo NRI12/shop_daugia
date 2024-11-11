@@ -62,6 +62,7 @@ class Product(db.Model):
     category = db.Column(db.String(64))
     create_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, onupdate=datetime.utcnow)
+    location = db.Column(db.String(256), nullable=True)
 
     # Khóa ngoại liên kết với Category
     category_id = db.Column(db.Integer, db.ForeignKey('categories.id'), nullable=True)
@@ -72,7 +73,6 @@ class Product(db.Model):
 
     def __repr__(self):
         return f'<Product {self.name}>'
-
 
 class ProductImage(db.Model):
     __tablename__ = 'product_images'

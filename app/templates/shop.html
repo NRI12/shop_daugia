@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="vi"></html>
+<body>
+    {% include 'layout/header.html' %}
+    
+    <!-- Khu vực Breadcrumb -->
+    <div class="breadcumb_area bg-img">
+        <div class="container h-100">
+            <div class="row h-100 align-items-center">
+                <div class="col-12">
+                    <div class="page-title text-center">
+                        <h2>Sản phẩm</h2>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Khu vực lưới cửa hàng -->
+    <section class="shop_grid_area section-padding-80">
+        <div class="container">
+            <div class="row">
+                <!-- Sidebar -->
+                <div class="col-12 col-md-4 col-lg-3">
+                    <div class="shop_sidebar_area">
+                        <!-- Widget danh mục -->
+                        <div class="widget catagory mb-50">
+                            <h6 class="widget-title mb-30">Danh mục</h6>
+                            <div class="catagories-menu">
+                                <ul class="menu-content">
+                                    <li class="{% if not current_category %}active{% endif %}">
+                                        <a href="{{ url_for('get_filtered_products') }}">Tất cả sản phẩm</a>
+                                    </li>
+                                    {% for category in categories %}
+                                    <li class="{% if current_category == category.id %}active{% endif %}">
+                                        <a href="{{ url_for('get_filtered_products', category=category.id) }}">
+                                            {{ category.name }}
+                                        </a>
+                                    </li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="widget location mb-50">
+                            <h6 class="widget-title mb-30">Lọc theo địa điểm</h6>
+                            <form action="{{ url_for('get_filtered_products') }}" method="GET">
+                                <input type="hidden" name="category" value="{{ current_category }}">
+                                <input type="hidden" name="min_price" value="{{ current_min_price }}">
+                                <input type="hidden" name="max_price" value="{{ current_max_price }}">
+                                <select name="location" class="form-control" onchange="this.form.submit()">
+                                    <option value="">Tất cả địa điểm</option>
+                                    {% for location in locations %}
+                                    <option value="{{ location }}" {% if current_location == location %}selected{% endif %}>
+                                        {{ location }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </form>
+                        </div>
+                        <!-- Bộ lọc giá -->
+                        <div class="widget price mb-50">
+                            <h6 class="widget-title mb-30">Lọc theo giá</h6>
+                            <form action="{{ url_for('get_filtered_products') }}" method="GET">
+                                <div class="price-range-area">
+                                    <input type="hidden" name="category" value="{{ current_category }}">
+                                    <input type="range" class="price-range" 
+                                           min="{{ price_range[0]|round|int }}" 
+                                           max="{{ price_range[1]|round|int }}"
+                                           value="{{ current_min_price or price_range[0]|round|int }}"
+                                           name="min_price">
+                                    <input type="range" class="price-range"
+                                           min="{{ price_range[0]|round|int }}"
+                                           max="{{ price_range[1]|round|int }}"
+                                           value="{{ current_max_price or price_range[1]|round|int }}"
+                                           name="max_price">
+                                    <div class="range-price">
+                                        Giá: <span id="minPrice"></span> VND - <span id="maxPrice"></span> VND
+                                    </div>
+                                    <button type="submit" class="btn essence-btn mt-15">Lọc</button>
+                                </div>
+                            </form>
+                        </div>
+
+                        
+                    </div>
+                </div>
+
+                <!-- Khu vực sản phẩm -->
+                <div class="col-12 col-md-8 col-lg-9">
+                    <!-- Thanh trên cùng -->
+                    <div class="shop_grid_product_area">
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="product-topbar d-flex align-items-center justify-content-between">
+                                    <!-- Tổng số sản phẩm -->
+                                    <div class="total-products">
+                                        <p><span>{{ total_products }}</span> sản phẩm được tìm thấy</p>
+                                    </div>
+                                    <!-- Sắp xếp -->
+                                    <div class="product-sorting d-flex">
+                                        <form action="{{ url_for('get_filtered_products') }}" method="GET">
+                                            <input type="hidden" name="category" value="{{ current_category }}">
+                                            <input type="hidden" name="min_price" value="{{ current_min_price }}">
+                                            <input type="hidden" name="max_price" value="{{ current_max_price }}">
+                                            <select name="sort" onchange="this.form.submit()">
+                                                <option value="newest" {% if current_sort == 'newest' %}selected{% endif %}>Mới nhất</option>
+                                                <option value="oldest" {% if current_sort == 'oldest' %}selected{% endif %}>Cũ nhất</option>
+                                                <option value="price_low" {% if current_sort == 'price_low' %}selected{% endif %}>Giá: Thấp đến Cao</option>
+                                                <option value="price_high" {% if current_sort == 'price_high' %}selected{% endif %}>Giá: Cao đến Thấp</option>
+                                            </select>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Lưới sản phẩm -->
+                        <div class="row">
+                            {% for product, auction in products %}
+                            <div class="col-12 col-sm-6 col-lg-4">
+                                <div class="single-product-wrapper">
+                                    <!-- Hình ảnh sản phẩm -->
+                                    <div class="product-img" style="height: 300px; overflow: hidden; display: flex; align-items: center; justify-content: center;">
+                                        {% if product.images %}
+                                        <img src="{{ url_for('static', filename=product.images[0].url) }}" alt="{{ product.name }}" style="max-height: 100%; max-width: 100%;">
+                                        {% if product.images|length > 1 %}
+                                        <img class="hover-img" src="{{ url_for('static', filename=product.images[1].url) }}" alt="{{ product.name }}" style="max-height: 100%; max-width: 100%;">
+                                        {% endif %}
+                                        {% else %}
+                                        <img src="{{ url_for('static', filename='img/no-image.jpg') }}" alt="Không có hình ảnh" style="max-height: 100%; max-width: 100%;">
+                                        {% endif %}
+                                    </div>
+
+                                    <!-- Mô tả sản phẩm -->
+                                    <div class="product-description">
+                                        <span>{{ product.category.name }}</span>
+                                        <a href="{{ url_for('product_details', auction_id=auction.id) }}">
+                                            <h6>{{ product.name }}</h6>
+                                        </a>
+                                        <p class="product-price">Giá hiện tại: {{ '{:,.0f}'.format(auction.current_price).replace(',', '.') }} VND</p>
+                                        <p class="small">Kết thúc: {{ auction.end_time.strftime('%Y-%m-%d %H:%M') }}</p>
+
+                                        <!-- Nội dung khi hover -->
+                                        <div class="hover-content">
+                                            <div class="add-to-cart-btn">
+                                                <a href="{{ url_for('product_details', auction_id=auction.id) }}" class="btn essence-btn">
+                                                    Xem đấu giá
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <!-- Phân trang -->
+                    {% if pagination.pages > 1 %}
+                    <nav aria-label="Điều hướng trang"></nav>
+                        <ul class="pagination mt-50 mb-70">
+                            {% if pagination.has_prev %}
+                            <li class="page-item">
+                                <a class="page-link" href="{{ url_for('get_filtered_products', page=pagination.prev_num, category=current_category, min_price=current_min_price, max_price=current_max_price, sort=current_sort) }}">
+                                    <i class="fa fa-angle-left"></i>
+                                </a>
+                            </li>
+                            {% endif %}
+
+                            {% for page in pagination.iter_pages() %}
+                            {% if page %}
+                            <li class="page-item {% if page == pagination.page %}active{% endif %}">
+                                <a class="page-link" href="{{ url_for('get_filtered_products', page=page, category=current_category, min_price=current_min_price, max_price=current_max_price, sort=current_sort) }}">
+                                    {{ page }}
+                                </a>
+                            </li>
+                            {% else %}
+                            <li class="page-item disabled"><span class="page-link">...</span></li>
+                            {% endif %}
+                            {% endfor %}
+
+                            {% if pagination.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="{{ url_for('get_filtered_products', page=pagination.next_num, category=current_category, min_price=current_min_price, max_price=current_max_price, sort=current_sort) }}">
+                                    <i class="fa fa-angle-right"></i>
+                                </a>
+                            </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Thanh trượt phạm vi giá
+        const minPriceInput = document.querySelector('input[name="min_price"]');
+        const maxPriceInput = document.querySelector('input[name="max_price"]');
+        const minPriceDisplay = document.getElementById('minPrice');
+        const maxPriceDisplay = document.getElementById('maxPrice');
+
+        function formatNumber(num) {
+            return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+        }
+
+        function updatePriceDisplay() {
+            minPriceDisplay.textContent = formatNumber(minPriceInput.value);
+            maxPriceDisplay.textContent = formatNumber(maxPriceInput.value);
+        }
+
+        minPriceInput.addEventListener('input', updatePriceDisplay);
+        maxPriceInput.addEventListener('input', updatePriceDisplay);
+
+        // Hiển thị ban đầu
+        updatePriceDisplay();
+    });
+    </script>
+</body>
+</html>

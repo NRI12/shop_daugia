@@ -4,11 +4,9 @@ from flask_migrate import Migrate
 from flask_jwt_extended import JWTManager
 from flask_cors import CORS
 from flask_wtf import CSRFProtect
-from flask_marshmallow import Marshmallow
 from flask_apscheduler import APScheduler
 
 db = SQLAlchemy()
-ma = Marshmallow()
 scheduler = APScheduler()
 
 def create_app():
@@ -17,7 +15,6 @@ def create_app():
 
     # Khởi tạo các extension
     db.init_app(app)
-    ma.init_app(app)
     Migrate(app, db)
     JWTManager(app)
     CORS(app, supports_credentials=True)

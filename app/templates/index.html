@@ -1,27 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="description" content="">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <title>Shop Đấu Giá</title>
-    <link rel="icon" href="{{ url_for('static', filename='img/core-img/favicon.ico') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/core-style.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.scss') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/animate.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap.min.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/classy-nav.min.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/core-style.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/font-awesome.min.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/jquery-ui.min.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/magnific-popup.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/nice-select.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/owl.carousel.css') }}">
-</head>
+
 <body>
     {% include 'layout/header.html' %}
-
     <div class="cart-bg-overlay"></div>
 
     <div class="right-side-cart-area">
@@ -87,7 +68,7 @@
                 <div class="col-12 col-sm-6 col-md-4">
                     <div class="single_catagory_area d-flex align-items-center justify-content-center bg-img" style="background-image: url('{{ category.image_url }}');">
                         <div class="catagory-content">
-                            <a href="#">{{ category.name }}</a>
+                            <a href="products">{{ category.name }}</a>
                         </div>
                     </div>
                 </div>
@@ -116,28 +97,28 @@
     <section class="new_arrivals_area section-padding-80 clearfix">
         <div class="container">
             <div class="row">
-                <div class="col-12">
-                    <div class="section-heading text-center">
-                        <h2>Các sản phẩm đang đấu giá mới nhất</h2>
-                    </div>
+            <div class="col-12">
+                <div class="section-heading text-center">
+                <h2>Các sản phẩm đang đấu giá mới nhất</h2>
                 </div>
             </div>
+            </div>
         </div>
-    
+        
         <div class="container">
             <div class="row">
-                <div class="col-12">
-                    {% if latest_auctions %}
-                        <div class="popular-products-slides owl-carousel">
-                            {% for auction in latest_auctions %}
-                            <div class="single-product-wrapper">
-                                <!-- Product Image -->
-                                <div class="product-img">
-                                    {% if auction.product.images %}
-                                        <img src="{{ url_for('static', filename=auction.product.images[0].url) }}" alt="">
-                                        <!-- Hover Thumb -->
-                                        {% if auction.product.images|length > 1 %}
-                                            <img class="hover-img" src="{{ url_for('static', filename=auction.product.images[1].url) }}" alt="">
+            <div class="col-12">
+                {% if latest_auctions %}
+                <div class="popular-products-slides owl-carousel">
+                    {% for auction in latest_auctions %}
+                    <div class="single-product-wrapper">
+                    <!-- Product Image -->
+                    <div class="product-img">
+                        {% if auction.product.images %}
+                        <img src="{{ url_for('static', filename=auction.product.images[0].url) }}" alt="" style="width: 100%; height: 300px; object-fit: cover;">
+                        <!-- Hover Thumb -->
+                        {% if auction.product.images|length > 1 %}
+                            <img class="hover-img" src="{{ url_for('static', filename=auction.product.images[1].url) }}" alt="" style="width: 100%; height: 300px; object-fit: cover;">
                                         {% endif %}
                                     {% else %}
                                         <!-- Placeholder image if no product image is available -->

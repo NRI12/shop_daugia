@@ -4,7 +4,7 @@ from flask_jwt_extended import (
     create_access_token, jwt_required, get_jwt_identity,
     unset_jwt_cookies, set_access_cookies
 )
-from app.models import User, Auction, Bid, Transaction, Notification, db, Category, Product,ProductImage
+from app.models import User, Auction, Bid, Transaction, Notification, db, Category, Product, ProductImage
 from datetime import datetime, timedelta
 import bcrypt
 from app.schemas import UserSchema, LoginSchema, AuctionSchema, BidSchema
@@ -13,6 +13,11 @@ import pytz
 from datetime import datetime
 from werkzeug.utils import secure_filename
 from flask import current_app as app
+from flask import Blueprint, request, render_template
+from sqlalchemy import desc, asc
+from app.models import Product, Category, Auction, db
+from datetime import datetime
+from datetime import datetime, timezone
 
 api_bp = Blueprint('', __name__)
 def get_current_time_in_vietnam():
@@ -57,7 +62,7 @@ def login():
     )
     
     response = jsonify({
-        "message": "Login successful",
+        "message": "Đăng nhập thành công",
         "user": {
             "email": user.email
         }
@@ -77,11 +82,11 @@ def check_auth():
     current_user_id = get_jwt_identity()
     
     if current_user_id is None:
-        return jsonify({"authenticated": False, "message": "User not logged in"}), 200
+        return jsonify({"authenticated": False, "message": "Người dùng chưa đăng nhập"}), 200
 
     user = User.query.get(current_user_id)
     if not user:
-        return jsonify({"message": "User not found"}), 404
+        return jsonify({"message": "Không tìm thấy người dùng"}), 404
 
     return jsonify({
         "authenticated": True,
@@ -92,7 +97,7 @@ def check_auth():
 
 @api_bp.route('/logout', methods=['POST'])
 def logout():
-    response = jsonify({"message": "Logout successful"})
+    response = jsonify({"message": "Đăng xuất thành công"})
     unset_jwt_cookies(response)
     return response, 200
 
@@ -132,18 +137,97 @@ def register():
 
     # Trả về phản hồi sau khi đăng ký thành công
     return jsonify({"message": "Đăng ký thành công!"}), 201
+@api_bp.route('/products', methods=['GET'])
+def get_filtered_products():
+    # Get filter parameters
+    category_id = request.args.get('category', type=int)
+    min_price = request.args.get('min_price', type=float, default=0)
+    max_price = request.args.get('max_price', type=float)
+    sort_by = request.args.get('sort', 'newest')
+    page = request.args.get('page', 1, type=int)
+    per_page = 9  # Products per page
+    location = request.args.get('location')  # Add location parameter
 
+    # Base query
+    query = db.session.query(Product, Auction)\
+        .join(Auction, Product.id == Auction.product_id)\
+        .filter(Auction.end_time > datetime.utcnow())  # Only show active auctions
+
+    # Apply category filter
+    if category_id:
+        query = query.filter(Product.category_id == category_id)
+    
+    # Apply price filter
+    if min_price is not None:
+        query = query.filter(Auction.current_price >= min_price)
+    if max_price is not None:
+        query = query.filter(Auction.current_price <= max_price)
+    
+    if location:
+        query = query.filter(Product.location == location)
+
+    # Get unique locations for filter dropdown
+    locations = db.session.query(Product.location)\
+        .distinct()\
+        .filter(Product.location != None)\
+        .all()
+    locations = [loc[0] for loc in locations]
+    # Apply sorting
+    if sort_by == 'price_low':
+        query = query.order_by(asc(Auction.current_price))
+    elif sort_by == 'price_high':
+        query = query.order_by(desc(Auction.current_price))
+    elif sort_by == 'oldest':
+        query = query.order_by(asc(Product.create_at))
+    else:  # newest
+        query = query.order_by(desc(Product.create_at))
+    
+    # Get total count for pagination
+    total = query.count()
+    
+    # Apply pagination
+    products_pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+    
+    # Get all categories for sidebar
+    categories = Category.query.all()
+    
+    # Get price range for filter
+    price_range = db.session.query(
+        db.func.min(Auction.current_price),
+        db.func.max(Auction.current_price)
+    ).first()
+    
+    return render_template(
+        'shop.html',
+        products=products_pagination.items,
+        locations=locations,
+        categories=categories,
+        current_category=category_id,
+        price_range=price_range,
+        current_min_price=min_price,
+        current_max_price=max_price,
+        current_sort=sort_by,
+        pagination=products_pagination,
+        total_products=total
+    )
+
+@api_bp.route('/api/filter-products', methods=['GET'])
+def api_filter_products():
+    """API endpoint for AJAX filtering"""
+    # Same filtering logic as above but returns JSON
+    # This can be used for dynamic filtering without page reload
+    pass
 @api_bp.route('/categories', methods=['POST'])
 @jwt_required()
 def create_category():
     data = request.json
     if 'name' not in data:
-        return jsonify({"message": "Category name is required"}), 400
+        return jsonify({"message": "Tên danh mục là bắt buộc"}), 400
 
     category = Category(name=data['name'])
     db.session.add(category)
     db.session.commit()
-    return jsonify({"message": "Category created successfully", "category_id": category.id}), 201
+    return jsonify({"message": "Tạo danh mục thành công", "category_id": category.id}), 201
 
 
 @api_bp.route('/sell-product', methods=['GET'])
@@ -152,10 +236,15 @@ def sell_product():
     # Lấy danh sách danh mục
     categories = Category.query.all()
     return render_template('create_auction.html', categories=categories)
+
 @api_bp.route('/product/<int:auction_id>', methods=['GET'])
 def product_details(auction_id):
     auction = Auction.query.get_or_404(auction_id)
-    return render_template('product_details.html', auction=auction)
+        # Define current time in GMT+7
+    vn_tz = pytz.timezone('Asia/Ho_Chi_Minh')
+    now = datetime.now(vn_tz).replace(tzinfo=None)
+
+    return render_template('product_details.html', auction=auction, now=now)
 
 # 5. Tạo phiên đấu giá mới
 @api_bp.route('/auctions', methods=['POST'])
@@ -169,18 +258,18 @@ def create_product_and_auction():
         required_fields = ['product_name', 'category_id', 'start_price', 'end_time']
         for field in required_fields:
             if field not in data or not data[field]:
-                return jsonify({"message": f"{field} is required"}), 400
+                return jsonify({"message": f"{field} là bắt buộc"}), 400
 
         # Chuyển đổi category_id thành số nguyên
         try:
             category_id = int(data.get('category_id'))
         except ValueError:
-            return jsonify({"message": "Invalid category_id"}), 400
+            return jsonify({"message": "category_id không hợp lệ"}), 400
 
         # Kiểm tra xem danh mục có tồn tại không
         category = Category.query.get(category_id)
         if not category:
-            return jsonify({"message": "Category not found"}), 404
+            return jsonify({"message": "Không tìm thấy danh mục"}), 404
 
         # Tạo sản phẩm mới
         product = Product(
@@ -218,17 +307,17 @@ def create_product_and_auction():
             end_time_format = '%Y-%m-%d %H:%M:%S'
             end_time = datetime.strptime(end_time_str, end_time_format)
         except ValueError:
-            return jsonify({"message": "Invalid end_time format. Use 'YYYY-MM-DD HH:MM:SS'"}), 400
+            return jsonify({"message": "Định dạng end_time không hợp lệ. Sử dụng 'YYYY-MM-DD HH:MM:SS'"}), 400
 
         # Kiểm tra xem end_time có lớn hơn thời gian hiện tại không
         if end_time <= datetime.utcnow():
-            return jsonify({"message": "End time must be in the future"}), 400
+            return jsonify({"message": "Thời gian kết thúc phải lớn hơn thời gian hiện tại"}), 400
 
         # Chuyển đổi start_price thành float
         try:
             start_price = float(data['start_price'])
         except ValueError:
-            return jsonify({"message": "Invalid start_price"}), 400
+            return jsonify({"message": "start_price không hợp lệ"}), 400
 
         # Tạo phiên đấu giá liên kết với sản phẩm vừa tạo
         auction = Auction(
@@ -242,16 +331,16 @@ def create_product_and_auction():
         db.session.commit()
 
         return jsonify({
-            "message": "Product and auction created successfully",
+            "message": "Tạo sản phẩm và phiên đấu giá thành công",
             "product_id": product.id,
             "auction_id": auction.id
         }), 201
 
     except Exception as e:
-        app.logger.error(f"Error in create_product_and_auction: {e}")
+        app.logger.error(f"Lỗi trong create_product_and_auction: {e}")
 
         # Ghi log lỗi
-        return jsonify({"message": "Internal server error"}), 500
+        return jsonify({"message": "Lỗi máy chủ nội bộ"}), 500
 # 6. Đặt giá thầu
 @api_bp.route('/bids', methods=['POST'])
 @jwt_required()
@@ -263,17 +352,25 @@ def create_bid():
         return validation_result
 
     auction = Auction.query.get(data['auction_id'])
-    if not auction or auction.status != 'ongoing' or auction.end_time < datetime.utcnow():
-        return jsonify({"message": "Invalid auction"}), 400
+    
+    # Use Vietnam timezone (GMT+7)
+    vn_tz = pytz.timezone('Asia/Ho_Chi_Minh')
+    current_time = datetime.now(vn_tz).replace(tzinfo=None)
+    
+    if not auction or auction.status != 'ongoing' or auction.end_time < current_time:
+        return jsonify({"message": "Phiên đấu giá không hợp lệ hoặc đã kết thúc"}), 400
+
+    if auction.seller_id == user_id:
+        return jsonify({"message": "Bạn không thể đặt giá thầu cho phiên đấu giá của chính mình"}), 400
 
     if data['amount'] <= auction.current_price:
-        return jsonify({"message": "Bid amount must be greater than current price"}), 400
+        return jsonify({"message": "Số tiền đặt giá thầu phải lớn hơn giá hiện tại"}), 400
 
     bid = Bid(amount=data['amount'], auction_id=data['auction_id'], user_id=user_id)
     auction.current_price = data['amount']
     db.session.add(bid)
     db.session.commit()
-    return jsonify({"message": "Bid placed successfully"}), 201
+    return jsonify({"message": "Đặt giá thầu thành công"}), 201
 
 # 7. Xác định người thắng cuộc của phiên đấu giá
 @api_bp.route('/auctions/<int:auction_id>/winner', methods=['POST'])
@@ -284,20 +381,20 @@ def determine_winner(auction_id):
 
     # Kiểm tra phiên đấu giá tồn tại
     if not auction:
-        return jsonify({"message": "Auction not found"}), 404
+        return jsonify({"message": "Không tìm thấy phiên đấu giá"}), 404
 
     # Kiểm tra nếu phiên đấu giá đã hoàn thành
     if auction.status == 'completed':
-        return jsonify({"message": "Auction already completed"}), 400
+        return jsonify({"message": "Phiên đấu giá đã hoàn thành"}), 400
 
     # Kiểm tra nếu thời gian hiện tại chưa quá thời gian kết thúc
     if current_time < auction.end_time:
-        return jsonify({"message": "Auction has not ended yet"}), 400
+        return jsonify({"message": "Phiên đấu giá chưa kết thúc"}), 400
 
     # Lấy giá thầu cao nhất
     winner_bid = Bid.query.filter_by(auction_id=auction_id).order_by(Bid.amount.desc()).first()
     if not winner_bid:
-        return jsonify({"message": "No bids found for this auction"}), 404
+        return jsonify({"message": "Không có giá thầu nào cho phiên đấu giá này"}), 404
 
     # Lấy thông tin người thắng và sản phẩm
     winner = User.query.get(winner_bid.user_id)
@@ -309,7 +406,7 @@ def determine_winner(auction_id):
     # Kiểm tra nếu người mua và người bán là cùng một người
     if winner_bid.user_id == auction.seller_id:
         message_for_both = (
-            f"You won your own auction for '{product.name}' with a bid of {winner_bid.amount}."
+            f"Bạn đã thắng phiên đấu giá của chính mình cho '{product.name}' với giá thầu {winner_bid.amount}."
         )
         notification = Notification(
             message=message_for_both,
@@ -324,7 +421,7 @@ def determine_winner(auction_id):
         ).first()
         if not winner_notification:
             winner_notification = Notification(
-                message=f"Congratulations! You won the auction for '{product.name}' with a bid of {winner_bid.amount}.",
+                message=f"Chúc mừng! Bạn đã thắng phiên đấu giá cho '{product.name}' với giá thầu {winner_bid.amount}.",
                 user_id=winner_bid.user_id,
                 auction_id=auction_id
             )
@@ -336,7 +433,7 @@ def determine_winner(auction_id):
         ).first()
         if not seller_notification:
             seller_notification = Notification(
-                message=f"Your auction for '{product.name}' has ended. The winning bid was {winner_bid.amount}.",
+                message=f"Phiên đấu giá của bạn cho '{product.name}' đã kết thúc. Giá thầu thắng là {winner_bid.amount}.",
                 user_id=auction.seller_id,
                 auction_id=auction_id
             )
@@ -346,7 +443,7 @@ def determine_winner(auction_id):
     db.session.commit()
 
     return jsonify({
-        "message": "Winner determined successfully",
+        "message": "Xác định người thắng thành công",
         "winner": winner.name,
         "winning_bid": winner_bid.amount
     }), 200
@@ -360,11 +457,11 @@ def create_transaction():
     auction = Auction.query.get(data['auction_id'])
 
     if auction.status != 'completed':
-        return jsonify({"message": "Auction not completed"}), 400
+        return jsonify({"message": "Phiên đấu giá chưa hoàn thành"}), 400
 
     winner_bid = Bid.query.filter_by(auction_id=auction.id).order_by(Bid.amount.desc()).first()
     if winner_bid.user_id != user_id:
-        return jsonify({"message": "You are not the winner"}), 403
+        return jsonify({"message": "Bạn không phải là người thắng"}), 403
 
     transaction = Transaction(
         auction_id=auction.id,
@@ -375,7 +472,7 @@ def create_transaction():
     db.session.add(transaction)
     db.session.commit()
 
-    return jsonify({"message": "Transaction created successfully"}), 201
+    return jsonify({"message": "Tạo giao dịch thành công"}), 201
 
 # 9. Lấy danh sách thông báo của người dùng
 @api_bp.route('/notifications', methods=['GET'])
