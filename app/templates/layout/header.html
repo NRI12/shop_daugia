@@ -49,10 +49,10 @@
                                 {% endfor %}
                             </div>
                         </li>
-                        <li><a href="sell-product" style="color: #333; text-decoration: none; padding: 10px 15px; font-weight: 500;">Đăng sản phẩm</a></li>
-                        <li><a href="products" style="color: #333; text-decoration: none; padding: 10px 15px; font-weight: 500;">Đang đấu giá</a></li>
-                        <li><a href="checkout.html" style="color: #333; text-decoration: none; padding: 10px 15px; font-weight: 500;">Thanh toán</a></li>
-                        <li><a href="contact.html" style="color: #333; text-decoration: none; padding: 10px 15px; font-weight: 500;">Liên hệ</a></li>
+                        <li><a href="/sell_product" style="color: #333; text-decoration: none; padding: 10px 15px; font-weight: 500;">Đăng sản phẩm</a></li>
+                        <li><a href="/products" style="color: #333; text-decoration: none; padding: 10px 15px; font-weight: 500;">Kho đấu giá</a></li>
+                        <li><a href="/cart" style="color: #333; text-decoration: none; padding: 10px 15px; font-weight: 500;">Sản phẩm của bạn</a></li>
+                        <li><a href="/contact.html" style="color: #333; text-decoration: none; padding: 10px 15px; font-weight: 500;">Liên hệ</a></li>                        
                     </ul>
                 </div>
                 <!-- Nav End -->
@@ -80,6 +80,12 @@
             <div class="cart-area" id="essenceCartBtn" style="cursor: pointer;">
                 <img src="{{ url_for('static', filename='img/core-img/bag.svg') }}" alt="Giỏ hàng" style="width: 20px; height: 20px;">
                 <span style="color: #333; font-weight: bold; margin-left: 5px;">{{ cart_count }}</span>
+            </div>
+            <div class="right-side-cart-area">
+                <!-- Cart Button -->
+                <div class="cart-button">
+                    <a href="cart" id="rightSideCart"><img src="{{ url_for('static', filename='img/core-img/bag.svg') }}" alt=""> <span>{{ cart_count }}</span></a>
+                </div>
             </div>
         </div>
     </div>
@@ -182,4 +188,11 @@
         </div>
     </div>
 </div>
+<script src="{{ url_for('static', filename='js/custom_script.js') }}"></script>
+<script src="{{ url_for('static', filename='js/jquery/jquery-2.2.4.min.js') }}"></script>
+<script src="{{ url_for('static', filename='js/popper.min.js') }}"></script>
+<script src="{{ url_for('static', filename='js/bootstrap.min.js') }}"></script>
+<script src="{{ url_for('static', filename='js/plugins.js') }}"></script>
+<script src="{{ url_for('static', filename='js/classy-nav.min.js') }}"></script>
+<script src="{{ url_for('static', filename='js/active.js') }}"></script>
 <script src="{{ url_for('static', filename='js/main.js') }}"></script>

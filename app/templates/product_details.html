@@ -285,10 +285,9 @@
                     <div class="locations">
                         <span class="diadiem-label">Địa điểm:</span>
                         <span class="diadiem">
-                            {{ auction.product.location}}
+                            {{ auction.product.location }}
                         </span>
                     </div>
-    
                 </div>
 
                 <div class="description">
@@ -298,36 +297,71 @@
                     Kết thúc: {{ auction.end_time.strftime('%d/%m/%Y %H:%M') }}
                 </div>
 
-                
-                {% if auction.end_time > now %}
-                <!-- Show bid form only if auction is still active -->
-                <form id="bidForm" class="bid-form">
-                    <input type="number" 
-                        id="bid_amount" 
-                        class="bid-input"
-                        step="1000" 
-                        placeholder="Nhập số tiền đặt thầu (VND)"
-                        required>
-                    <button type="submit" class="bid-button">Đặt giá thầu</button>
-                </form>
-                <div id="bidMessage" class="bid-message"></div>
-                {% else %}
-                {% if auction.winner %}
-                    <div class="winner-info"></div>
+                {% if auction.status == 'completed' and winner %}
+                    <div class="winner-info">
                         <h3>Người thắng đấu giá</h3>
-                        <p>{{ auction.winner.fullname }}</p>
+                        <p>{{ winner.name }}</p>
                         <p>Giá thắng: {{ "{:,.0f}".format(auction.current_price) }} VND</p>
                     </div>
+                {% else %}
+                    <p>Phiên đấu giá đang diễn ra hoặc chưa có người thắng.</p>
                 {% endif %}
+                
+                {% if auction.end_time > now %}
+                    <!-- Show bid form only if auction is still active -->
+                    <form id="bidForm" class="bid-form">
+                        <input type="number" 
+                            id="bid_amount" 
+                            class="bid-input"
+                            step="1000" 
+                            placeholder="Nhập số tiền đặt thầu (VND)"
+                            required>
+                        <button type="submit" class="bid-button">Đặt giá thầu</button>
+                    </form>
+                    <div id="bidMessage" class="bid-message"></div>
                 {% endif %}
-
-                <div id="bidMessage" class="bid-message"></div>
             </div>
         </div>
     </div>
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
+                // Lấy ID của đấu giá hiện tại
+            const auctionId = {{ auction.id }};
+            const currentPriceElement = document.getElementById('current_price');
+
+            // Hàm kiểm tra giá hiện tại
+            async function checkForUpdates() {
+                try {
+                    const response = await fetch(`/auctions/${auctionId}/current_price`);
+                    if (response.ok) {
+                        const data = await response.json();
+                        const newCurrentPrice = data.current_price;
+
+                        // Lấy giá hiện tại từ giao diện
+                        const displayedPrice = parseFloat(currentPriceElement.innerText.replace(/[^\d.-]/g, ''));
+
+                        if (newCurrentPrice !== displayedPrice) {
+                            // Cập nhật giá trên giao diện
+                            currentPriceElement.innerText = 
+                                new Intl.NumberFormat('vi-VN').format(newCurrentPrice) + ' VND';
+
+                            // Hiển thị thông báo (nếu cần)
+                            showBidMessage('Giá thầu đã được cập nhật.', 'info');
+                        }
+                    } else {
+                        console.error('Không thể lấy thông tin giá thầu.');
+                    }
+                } catch (error) {
+                    console.error('Lỗi khi kiểm tra cập nhật:', error);
+                }
+            }
+
+            // Thiết lập polling mỗi 5 giây
+            setInterval(checkForUpdates, 5000); // 5000 milliseconds = 5 seconds
+
+            // Gọi hàm lần đầu tiên
+            checkForUpdates();
             // Gallery functionality
             const gallery = document.querySelector('.product-gallery');
             if (gallery) {
@@ -449,5 +483,8 @@
             updateTimeRemaining();
         });
     </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.4/socket.io.min.js" integrity="sha384-Cw2ZL96fJv1gXqg0pZpVvJ+v+UqN0Bz8ZdK3AmJNoOzbVnPkv3IbbJJoP7fVnZ1" crossorigin="anonymous"></script>
+
+
 </body>
 </html>

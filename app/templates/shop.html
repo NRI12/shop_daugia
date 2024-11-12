@@ -80,8 +80,6 @@
                                 </div>
                             </form>
                         </div>
-
-                        
                     </div>
                 </div>
 
@@ -139,7 +137,7 @@
                                         </a>
                                         <p class="product-price">Giá hiện tại: {{ '{:,.0f}'.format(auction.current_price).replace(',', '.') }} VND</p>
                                         <p class="small">Kết thúc: {{ auction.end_time.strftime('%Y-%m-%d %H:%M') }}</p>
-
+                                        <p class="small">Trạng thái: {{ auction.status }}</p>
                                         <!-- Nội dung khi hover -->
                                         <div class="hover-content">
                                             <div class="add-to-cart-btn">
@@ -195,28 +193,28 @@
     </section>
 
     <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // Thanh trượt phạm vi giá
-        const minPriceInput = document.querySelector('input[name="min_price"]');
-        const maxPriceInput = document.querySelector('input[name="max_price"]');
-        const minPriceDisplay = document.getElementById('minPrice');
-        const maxPriceDisplay = document.getElementById('maxPrice');
+        document.addEventListener('DOMContentLoaded', function() {
+            // Thanh trượt phạm vi giá
+            const minPriceInput = document.querySelector('input[name="min_price"]');
+            const maxPriceInput = document.querySelector('input[name="max_price"]');
+            const minPriceDisplay = document.getElementById('minPrice');
+            const maxPriceDisplay = document.getElementById('maxPrice');
 
-        function formatNumber(num) {
-            return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-        }
+            function formatNumber(num) {
+                return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+            }
 
-        function updatePriceDisplay() {
-            minPriceDisplay.textContent = formatNumber(minPriceInput.value);
-            maxPriceDisplay.textContent = formatNumber(maxPriceInput.value);
-        }
+            function updatePriceDisplay() {
+                minPriceDisplay.textContent = formatNumber(minPriceInput.value);
+                maxPriceDisplay.textContent = formatNumber(maxPriceInput.value);
+            }
 
-        minPriceInput.addEventListener('input', updatePriceDisplay);
-        maxPriceInput.addEventListener('input', updatePriceDisplay);
+            minPriceInput.addEventListener('input', updatePriceDisplay);
+            maxPriceInput.addEventListener('input', updatePriceDisplay);
 
-        // Hiển thị ban đầu
-        updatePriceDisplay();
-    });
+            // Hiển thị ban đầu
+            updatePriceDisplay();
+        });
     </script>
 </body>
 </html>

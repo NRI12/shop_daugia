@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Giỏ Hàng Đấu Giá</title>
+    
+    <!-- Include all the CSS from header -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/core-style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.scss') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/classy-nav.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/font-awesome.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/nice-select.css') }}">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+    
+    <style>
+        .auction-table th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+        }
+        .status-badge {
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 0.85em;
+        }
+        .status-active {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+        }
+        .status-winning {
+            background-color: #e3f2fd;
+            color: #1565c0;
+        }
+        .status-outbid {
+            background-color: #fbe9e7;
+            color: #d84315;
+        }
+        .time-remaining {
+            font-size: 0.9em;
+            color: #666;
+        }
+        .price-column {
+            min-width: 150px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Include header -->
+    {% include 'layout/header.html' %}
+
+    <!-- Cart Content -->
+    <div class="cart-content-area py-5">
+        <div class="container">
+            <div class="row">
+                <div class="col-12">
+                    <div class="cart-title mb-4">
+                        <h2>Danh Sách Đấu Giá Của Tôi</h2>
+                    </div>
+
+                    <div class="cart-table-area">
+                        <!-- Empty State -->
+                        <div id="emptyState" class="text-center py-5 {% if items %}d-none{% endif %}">
+                            <i class="fas fa-gavel fa-3x mb-3 text-muted"></i>
+                            <h5 class="text-muted">Bạn chưa tham gia đấu giá sản phẩm nào</h5>
+                            <a href="/products" class="btn btn-primary mt-3">Xem Sản Phẩm Đấu Giá</a>
+                        </div>
+                        
+
+                        <!-- Auction Table -->
+                        <div class="table-responsive">
+                            <table class="table auction-table align-middle" id="auctionTable">
+                                <thead>
+                                    <tr>
+                                        <th>Sản Phẩm</th>
+                                        <th>Danh Mục</th>
+                                        <th class="price-column">Giá Hiện Tại</th>
+                                        <th class="price-column">Giá Đặt Của Bạn</th>
+                                        <th>Trạng Thái</th>
+                                        <th>Thời Gian Còn Lại</th>
+                                        <th>Thao Tác</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% if items %}
+                                        {% for item in items %}
+                                        <tr id="auction-row-{{ item.auction_id }}">
+                                            <!-- Sản Phẩm (Product) -->
+                                            <td>
+                                                <div class="d-flex align-items-center">
+                                                    <img src="{{ item.product_image or '/static/default-product.png' }}" alt="{{ item.product_name }}" width="50" height="50" class="me-2">
+                                                    <span>{{ item.product_name }}</span>
+                                                </div>
+                                            </td>
+                                            <!-- Danh Mục (Category) -->
+                                            <td>{{ item.category }}</td>
+                                            <!-- Giá Hiện Tại (Current Price) -->
+                                            <td class="price-column">{{ "{:,.0f}".format(item.current_price) }} ₫</td>
+                                            <!-- Giá Đặt Của Bạn (Your Bid) -->
+                                            <td class="price-column">{{ "{:,.0f}".format(item.my_bid) }} ₫</td>
+                                            <!-- Trạng Thái (Status) -->
+                                            <td>
+                                                {% if item.auction_status == 'completed' %}
+                                                    {% if item.status.is_winning %}
+                                                        {% if item.paid_status %}
+                                                            <span class="badge bg-primary">Bạn là người chiến thắng - Đã thanh toán</span>
+                                                        {% else %}
+                                                            <span class="badge bg-secondary">Bạn là người chiến thắng</span>
+                                                        {% endif %}
+                                                    {% else %}
+                                                        <span class="badge bg-secondary">Kết thúc</span>
+                                                    {% endif %}
+                                                {% else %}
+                                                    {% if item.status.is_winning %}
+                                                        <span class="badge bg-success">Đang dẫn đầu</span>
+                                                    {% elif item.status.is_tied %}
+                                                        <span class="badge bg-warning">Đang hòa</span>
+                                                    {% else %}
+                                                        <span class="badge bg-danger">Bị vượt</span>
+                                                    {% endif %}
+                                                {% endif %}
+                                            </td>
+                                            
+                                            <!-- Thời Gian Còn Lại (Time Remaining) -->
+                                            <td>{{ item.time_remaining }}</td>
+                                            <!-- Thao Tác (Actions) -->
+                                            <td>
+                                                <a href="/product/{{ item.auction_id }}" class="btn btn-primary btn-sm">Chi tiết</a>
+                                                {% if item.payment_required %}
+                                                    <button class="btn btn-success btn-sm mt-2" onclick="payTransaction({{ item.auction_id }})">Thanh toán</button>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        
+                                        {% endfor %}
+                                    {% else %}
+                                        <tr>
+                                            <td colspan="7" class="text-center">Không có đấu giá nào</td>
+                                        </tr>
+                                    {% endif %}
+                                </tbody>
+                                
+                            </table>
+                        </div>
+
+                        <!-- Summary Card -->
+                        <!-- Summary Card -->
+                        <div class="card mt-4">
+                            <div class="card-body">
+                                <div class="row">
+                                    <!-- Tổng số phiên đấu giá (Total Auctions) -->
+                                    <div class="col-md-4">
+                                        <div class="d-flex align-items-center">
+                                            <i class="fas fa-gavel fa-2x text-primary me-3"></i>
+                                            <div>
+                                                <h6 class="mb-0">Tổng số phiên đấu giá</h6>
+                                                <h4 class="mb-0" id="totalAuctions">{{ total_auctions }}</h4>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <!-- Đang dẫn đầu (Winning Auctions) -->
+                                    <div class="col-md-4">
+                                        <div class="d-flex align-items-center">
+                                            <i class="fas fa-trophy fa-2x text-success me-3"></i>
+                                            <div>
+                                                <h6 class="mb-0">Đã dẫn đầu</h6>
+                                                <h4 class="mb-0" id="winningAuctions">{{ winning_auctions }}</h4>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <!-- Tổng giá trị đặt giá (Total Bid Value) -->
+                                    <div class="col-md-4">
+                                        <div class="d-flex align-items-center">
+                                            <i class="fas fa-coins fa-2x text-warning me-3"></i>
+                                            <div>
+                                                <h6 class="mb-0">Tổng giá trị đặt giá</h6>
+                                                <h4 class="mb-0" id="totalBidValue">{{ "{:,.0f}".format(total_bid_value) }} ₫</h4>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>
+<script>
+   function payTransaction(auctionId) {
+    fetch(`/pay_transaction/${auctionId}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + localStorage.getItem('access_token')
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Tìm hàng tương ứng của sản phẩm đấu giá
+            const row = document.querySelector(`#auction-row-${auctionId}`);
+            
+            if (row) {
+                // Cập nhật trạng thái trong cell thứ 5 (index 4 - cột Status)
+                const statusCell = row.cells[4];
+                if (statusCell) {
+                    statusCell.innerHTML = `
+                        <span class="badge bg-primary">Bạn là người chiến thắng - Đã thanh toán</span>
+                    `;
+                }
+
+                // Cập nhật cột action (cột cuối cùng)
+                const actionCell = row.cells[6];
+                if (actionCell) {
+                    actionCell.innerHTML = `
+                        <a href="/product/${auctionId}" class="btn btn-primary btn-sm">Chi tiết</a>
+                    `;
+                }
+
+                // Cập nhật các số liệu thống kê
+                updateSummaryStats(data.bid_amount);
+            }
+
+            // Hiển thị thông báo thành công
+            showNotification('success', data.message);
+        } else {
+            showNotification('error', data.message || 'Có lỗi xảy ra khi thanh toán');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showNotification('error', 'Có lỗi xảy ra khi thanh toán');
+    });
+}
+
+// Hàm cập nhật số liệu thống kê
+function updateSummaryStats(bidAmount) {
+    // Cập nhật tổng số phiên đấu giá
+    const totalAuctionsElement = document.getElementById('totalAuctions');
+    if (totalAuctionsElement) {
+        const currentTotal = parseInt(totalAuctionsElement.textContent);
+        totalAuctionsElement.textContent = currentTotal - 1;
+    }
+
+    // Cập nhật tổng giá trị đặt giá
+    const totalBidValueElement = document.getElementById('totalBidValue');
+    if (totalBidValueElement) {
+        const currentValue = parseInt(totalBidValueElement.textContent.replace(/[^0-9]/g, ''));
+        const newValue = currentValue - bidAmount;
+        totalBidValueElement.textContent = new Intl.NumberFormat('vi-VN').format(newValue) + ' ₫';
+    }
+}
+
+// Hàm hiển thị thông báo
+function showNotification(type, message) {
+    // Kiểm tra xem đã có thông báo nào chưa
+    let notification = document.querySelector('.notification-toast');
+    if (notification) {
+        notification.remove();
+    }
+
+    // Tạo thông báo mới
+    notification = document.createElement('div');
+    notification.className = `notification-toast alert alert-${type === 'success' ? 'success' : 'danger'} position-fixed`;
+    notification.style.cssText = 'top: 20px; right: 20px; z-index: 1000; animation: fadeIn 0.5s, fadeOut 0.5s 2.5s';
+    notification.textContent = message;
+
+    // Thêm CSS animation
+    const style = document.createElement('style');
+    style.textContent = `
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes fadeOut {
+            from { opacity: 1; transform: translateY(0); }
+            to { opacity: 0; transform: translateY(-20px); }
+        }
+    `;
+    document.head.appendChild(style);
+
+    // Thêm thông báo vào body
+    document.body.appendChild(notification);
+
+    // Tự động xóa thông báo sau 3 giây
+    setTimeout(() => {
+        notification.remove();
+    }, 3000);
+}
+    </script>
+    
