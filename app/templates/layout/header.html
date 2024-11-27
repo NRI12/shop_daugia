@@ -4,7 +4,6 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <title>Shop Đấu Giá</title>
-    <link rel="icon" href="{{ url_for('static', filename='img/core-img/favicon.ico') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/core-style.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.scss') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/classy-nav.min.css') }}">
@@ -52,10 +51,10 @@
                         <li><a href="/sell_product" style="color: #333; text-decoration: none; padding: 10px 15px; font-weight: 500;">Đăng sản phẩm</a></li>
                         <li><a href="/products" style="color: #333; text-decoration: none; padding: 10px 15px; font-weight: 500;">Kho đấu giá</a></li>
                         <li><a href="/cart" style="color: #333; text-decoration: none; padding: 10px 15px; font-weight: 500;">Sản phẩm của bạn</a></li>
-                        <li><a href="/contact.html" style="color: #333; text-decoration: none; padding: 10px 15px; font-weight: 500;">Liên hệ</a></li>                        
+                        <li><a href="/notifications" style="color: #333; text-decoration: none; padding: 10px 15px; font-weight: 500;">Thông báo</a></li>                        
+                        <li><a href="/profile" style="color: #333; text-decoration: none; padding: 10px 15px; font-weight: 500;">Hồ sơ</a></li>
                     </ul>
                 </div>
-                <!-- Nav End -->
             </div>
         </nav>
         <div class="header-meta d-flex clearfix justify-content-end" style="display: flex; align-items: center; gap: 15px;">
@@ -65,9 +64,6 @@
                     <button type="submit"><i class="fa fa-search" aria-hidden="true"></i></button>
                 </form>
             </div>
-            <div class="favourite-area" style="cursor: pointer;">
-                <img src="{{ url_for('static', filename='img/core-img/heart.svg') }}" alt="Yêu thích" style="width: 20px; height: 20px;">
-            </div>
             <div class="user-login-info" id="userInfo">
                 <span id="welcomeText" style="display: none;">Welcome!</span>
                 <button id="loginButton" type="button" data-toggle="modal" data-target="#authModal" class="btn btn-link" style="display: inline; outline: none; box-shadow: none; border: none; background: transparent; color: #007bff; cursor: pointer; text-decoration: none;">
@@ -76,16 +72,6 @@
                 <button id="logoutButton" type="button" class="btn btn-link" style="display: none; outline: none; box-shadow: none; border: none; background: transparent; color: #007bff; cursor: pointer; text-decoration: none;">
                     Đăng xuất
                 </button>
-            </div>
-            <div class="cart-area" id="essenceCartBtn" style="cursor: pointer;">
-                <img src="{{ url_for('static', filename='img/core-img/bag.svg') }}" alt="Giỏ hàng" style="width: 20px; height: 20px;">
-                <span style="color: #333; font-weight: bold; margin-left: 5px;">{{ cart_count }}</span>
-            </div>
-            <div class="right-side-cart-area">
-                <!-- Cart Button -->
-                <div class="cart-button">
-                    <a href="cart" id="rightSideCart"><img src="{{ url_for('static', filename='img/core-img/bag.svg') }}" alt=""> <span>{{ cart_count }}</span></a>
-                </div>
             </div>
         </div>
     </div>
@@ -196,3 +182,4 @@
 <script src="{{ url_for('static', filename='js/classy-nav.min.js') }}"></script>
 <script src="{{ url_for('static', filename='js/active.js') }}"></script>
 <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</script>

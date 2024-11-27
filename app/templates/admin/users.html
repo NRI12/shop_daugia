@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <title>Admin | Dashboard</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/source-sans-3@5.0.12/index.css" integrity="sha256-tXJfXfp6Ewt1ilPzLDtQnJV4hclT9XuaZUKyUvmyr+Q=" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/overlayscrollbars@2.3.0/styles/overlayscrollbars.min.css" integrity="sha256-dSokZseQNT08wYEWiz5iLI8QPlKxG+TswNRD8k35cpg=" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.min.css" integrity="sha256-Qsx5lrStHZyR9REqhUF8iQt73X06c8LGIUPzpOhwRrI=" crossorigin="anonymous">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/adminlte.css') }}">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/apexcharts@3.37.1/dist/apexcharts.css" integrity="sha256-4MX+61mt9NVvvuPjUWdUdyfZfxSB1/Rf9WtqRHgG5S0=" crossorigin="anonymous">
+</head>
+
+<body class="layout-fixed sidebar-expand-lg bg-body-tertiary">
+    <div class="app-wrapper">
+        {% include 'admin/header.html' %}
+        {% include 'admin/sidebar.html' %}
+        <div class="container-fluid px-4">
+            <h1 class="mt-4">Quản lý người dùng</h1>
+            
+            <!-- Search and Filter -->
+            <div class="card mb-4">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-md-6">
+                            <div class="input-group">
+                                <input type="text" id="searchInput" class="form-control" 
+                                       placeholder="Tìm kiếm theo tên, email, số điện thoại..." 
+                                       value="{{ search }}">
+                                <button class="btn btn-primary" type="button" onclick="searchUsers()">
+                                    <i class="fas fa-search"></i> Tìm kiếm
+                                </button>
+                            </div>
+                        </div>
+                        <div class="col-md-6 text-end">
+                            <button class="btn btn-primary" onclick="openAddUserModal()">
+                                <i class="fas fa-user-plus"></i> Thêm người dùng
+                            </button>
+                            <button class="btn btn-success" onclick="exportUsers()">
+                                <i class="fas fa-file-export"></i> Xuất dữ liệu
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        
+            <!-- Users Table -->
+            <div class="card mb-4">
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-striped">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Tên</th>
+                                    <th>Email</th>
+                                    <th>Số điện thoại</th>
+                                    <th>Vai trò</th>
+                                    <th>Ngày tạo</th>
+                                    <th>Lần đăng nhập cuối</th>
+                                    <th>Thao tác</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for user in users.items %}
+                                <tr>
+                                    <td>{{ user.id }}</td>
+                                    <td>{{ user.name }}</td>
+                                    <td>{{ user.email }}</td>
+                                    <td>{{ user.phone_number }}</td>
+                                    <td>
+                                        <span class="badge {% if user.role == 'admin' %}bg-danger{% else %}bg-primary{% endif %}">
+                                            {{ user.role }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {% if user.created_at %}
+                                            {{ user.created_at.strftime("%Y-%m-%d %H:%M:%S") }}
+                                        {% else %}
+                                            N/A
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if user.last_login %}
+                                            {{ user.last_login.strftime("%Y-%m-%d %H:%M:%S") }}
+                                        {% else %}
+                                            N/A
+                                        {% endif %}
+                                    </td>
+                                    <td>                                                                             
+                                        <button class="btn btn-sm btn-info" onclick="viewUser({{ user.id }})">
+                                            <i class="bi bi-eye"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-warning" onclick="editUser({{ user.id }})">
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-danger" onclick="deleteUser({{ user.id }})">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </td>
+                                    
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+        
+                    <!-- Pagination -->
+                    <nav aria-label="Page navigation">
+                        <ul class="pagination justify-content-center">
+                            {% if users.has_prev %}
+                            <li class="page-item">
+                                <a class="page-link" href="{{ url_for('admin_users', page=users.prev_num, search=search) }}">
+                                    Previous
+                                </a>
+                            </li>
+                            {% endif %}
+                            
+                            {% for page_num in users.iter_pages(left_edge=2, left_current=2, right_current=2, right_edge=2) %}
+                                {% if page_num %}
+                                    <li class="page-item {% if page_num == users.page %}active{% endif %}">
+                                        <a class="page-link" href="{{ url_for('admin_users', page=page_num, search=search) }}">
+                                            {{ page_num }}
+                                        </a>
+                                    </li>
+                                {% else %}
+                                    <li class="page-item disabled"><span class="page-link">...</span></li>
+                                {% endif %}
+                            {% endfor %}
+                            
+                            {% if users.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="{{ url_for('admin_users', page=users.next_num, search=search) }}">
+                                    Next
+                                </a>
+                            </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                </div>
+            </div>
+        </div>
+        <!-- Add User Modal -->
+        <div class="modal fade" id="addUserModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Thêm người dùng mới</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="addUserForm">
+                            <div class="mb-3">
+                                <label class="form-label">Tên</label>
+                                <input type="text" class="form-control" id="addUserName" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Email</label>
+                                <input type="email" class="form-control" id="addUserEmail" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Mật khẩu</label>
+                                <input type="password" class="form-control" id="addUserPassword" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Số điện thoại</label>
+                                <input type="text" class="form-control" id="addUserPhone">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Vai trò</label>
+                                <select class="form-select" id="addUserRole">
+                                    <option value="user">Người dùng</option>
+                                    <option value="admin">Quản trị viên</option>
+                                </select>
+                            </div>
+                            <div class="text-end">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                                <button type="submit" class="btn btn-primary">Thêm người dùng</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- User Detail Modal -->
+        <div class="modal fade" id="userDetailModal" tabindex="-1">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Chi tiết người dùng</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div id="userDetailContent"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Edit User Modal -->
+            <div class="modal fade" id="editUserModal" tabindex="-1">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Chỉnh sửa người dùng</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <form id="editUserForm">
+                                <input type="hidden" id="editUserId">
+                                <div class="mb-3">
+                                    <label class="form-label">Tên</label>
+                                    <input type="text" class="form-control" id="editUserName">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Email</label>
+                                    <input type="email" class="form-control" id="editUserEmail">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Số điện thoại</label>
+                                    <input type="text" class="form-control" id="editUserPhone">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Vai trò</label>
+                                    <select class="form-select" id="editUserRole">
+                                        <option value="user">Người dùng</option>
+                                        <option value="admin">Quản trị viên</option>
+                                    </select>
+                                </div>
+                                <div class="text-end">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                                    <button type="submit" class="btn btn-primary">Lưu thay đổi</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/overlayscrollbars@2.3.0/browser/overlayscrollbars.browser.es6.min.js" integrity="sha256-H2VM7BKda+v2Z4+DRy69uknwxjyDRhszjXFhsL4gD3w=" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js" integrity="sha256-whL0tQWoY1Ku1iskqPFvmZ+CHsvmRWx/PIoEvIeWh4I=" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.min.js" integrity="sha256-YMa+wAM6QkVyz999odX7lPRxkoYAan8suedu4k2Zur8=" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts@3.37.1/dist/apexcharts.min.js" integrity="sha256-+vh8GkaU7C9/wbSLIcwq82tQ2wTf44aOHA8HlBMwRI8=" crossorigin="anonymous"></script>
+    <script>
+        function searchUsers() {
+            const searchValue = document.getElementById('searchInput').value;
+            window.location.href = `{{ url_for('admin_users') }}?search=${encodeURIComponent(searchValue)}`;
+        }
+        
+        function exportUsers() {
+            window.location.href = "{{ url_for('export_users') }}";
+        }
+        function openAddUserModal() {
+            document.getElementById('addUserForm').reset();
+            new bootstrap.Modal(document.getElementById('addUserModal')).show();
+        }
+
+        document.getElementById('addUserForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const userData = {
+                name: document.getElementById('addUserName').value,
+                email: document.getElementById('addUserEmail').value,
+                password: document.getElementById('addUserPassword').value,
+                phone_number: document.getElementById('addUserPhone').value,
+                role: document.getElementById('addUserRole').value
+            };
+
+            const token = localStorage.getItem('access_token'); // Điều chỉnh tùy vào cách bạn lưu token
+
+            try {
+                const response = await fetch('/admin/users', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify(userData)
+                });
+
+                if (response.ok) {
+                    window.location.reload();
+                } else {
+                    const errorData = await response.json();
+                    alert(`Thêm người dùng thất bại: ${errorData.message}`);
+                }
+            } catch (error) {
+                alert('Không thể thêm người dùng mới');
+                console.error(error);
+            }
+        });
+
+        async function viewUser(userId) {
+            try {
+                const response = await fetch(`/admin/users/${userId}`);
+                const userData = await response.json();
+                
+                const content = `
+                    <div class="table-responsive">
+                        <table class="table">
+                            <tr><th>ID:</th><td>${userData.id}</td></tr>
+                            <tr><th>Tên:</th><td>${userData.name}</td></tr>
+                            <tr><th>Email:</th><td>${userData.email}</td></tr>
+                            <tr><th>Số điện thoại:</th><td>${userData.phone_number}</td></tr>
+                            <tr><th>Vai trò:</th><td>${userData.role}</td></tr>
+                            <tr><th>Ngày tạo:</th><td>${userData.created_at}</td></tr>
+                            <tr><th>Lần đăng nhập cuối:</th><td>${userData.last_login || 'Chưa đăng nhập'}</td></tr>
+                        </table>
+                    </div>
+                `;
+                
+                document.getElementById('userDetailContent').innerHTML = content;
+                new bootstrap.Modal(document.getElementById('userDetailModal')).show();
+            } catch (error) {
+                alert('Không thể tải thông tin người dùng');
+            }
+        }
+        
+        async function editUser(userId) {
+            try {
+                const response = await fetch(`/admin/users/${userId}`);
+                const userData = await response.json();
+                
+                document.getElementById('editUserId').value = userData.id;
+                document.getElementById('editUserName').value = userData.name;
+                document.getElementById('editUserEmail').value = userData.email;
+                document.getElementById('editUserPhone').value = userData.phone_number;
+                document.getElementById('editUserRole').value = userData.role;
+                
+                new bootstrap.Modal(document.getElementById('editUserModal')).show();
+            } catch (error) {
+                alert('Không thể tải thông tin người dùng');
+            }
+        }
+        
+        document.getElementById('editUserForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const userId = document.getElementById('editUserId').value;
+            const userData = {
+                name: document.getElementById('editUserName').value,
+                email: document.getElementById('editUserEmail').value,
+                phone_number: document.getElementById('editUserPhone').value,
+                role: document.getElementById('editUserRole').value
+            };
+            
+            try {
+                const response = await fetch(`/admin/users/${userId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(userData)
+                });
+                
+                if (response.ok) {
+                    window.location.reload();
+                } else {
+                    throw new Error('Cập nhật thất bại');
+                }
+            } catch (error) {
+                alert('Không thể cập nhật thông tin người dùng');
+            }
+        });
+        
+        async function deleteUser(userId) {
+            if (confirm('Bạn có chắc chắn muốn xóa người dùng này?')) {
+                try {
+                    const response = await fetch(`/admin/users/${userId}`, {
+                        method: 'DELETE'
+                    });
+                    
+                    if (response.ok) {
+                        window.location.reload();
+                    } else {
+                        throw new Error('Xóa thất bại');
+                    }
+                } catch (error) {
+                    alert('Không thể xóa người dùng');
+                }
+            }
+        }
+        
+        document.getElementById('searchInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                searchUsers();
+            }
+        });
+        </script>
+</body>
+</html>

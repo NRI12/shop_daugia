@@ -1,0 +1,41 @@
+<aside class="app-sidebar bg-body-secondary shadow" data-bs-theme="dark">
+    <div class="sidebar-brand">
+        <a href="{{ url_for('get_admin_stats') }}" class="brand-link">
+            <span class="brand-text fw-light">Dashboard</span>
+        </a>
+    </div>
+    <div class="sidebar-wrapper">
+        <nav class="mt-2">
+            <!--begin::Sidebar Menu-->
+            <ul class="nav sidebar-menu flex-column" data-lte-toggle="treeview" role="menu" data-accordion="false">
+                <li class="nav-item">
+                    <a href="{{ url_for('get_admin_stats') }}" class="nav-link">
+                        <i class="nav-icon bi bi-house-fill"></i>
+                        <p>Trang chủ</p>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ url_for('admin_users') }}" class="nav-link">
+                        <i class="nav-icon bi bi-people-fill"></i>
+                        <p>Quản lý người dùng</p>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ url_for('admin_auctions') }}" class="nav-link">
+                        <i class="nav-icon bi bi-hammer"></i>
+                        <p>Quản lý đơn đấu giá</p>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ url_for('admin_transactions') }}" class="nav-link">
+                        <i class="nav-icon bi bi-currency-exchange"></i>
+                        <p>Quản lý giao dịch</p>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+    </div>
+    <!--end::Sidebar Wrapper-->
+</aside>
+<!--end::Sidebar-->
+<!--begin::App Main-->

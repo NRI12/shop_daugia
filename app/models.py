@@ -1,5 +1,14 @@
 from datetime import datetime
+import pytz
 from app import db
+
+
+def get_current_time_in_vietnam():
+    vn_tz = pytz.timezone('Asia/Ho_Chi_Minh')
+    vn_time = datetime.now(vn_tz)
+    return vn_time.replace(tzinfo=None)
+now_time = get_current_time_in_vietnam()
+
 
 class User(db.Model):
     __tablename__ = 'users'
@@ -9,7 +18,10 @@ class User(db.Model):
     email = db.Column(db.String(120), index=True, unique=True)
     password = db.Column(db.String(128))
     phone_number = db.Column(db.String(15))
+    address = db.Column(db.String(256))
     role = db.Column(db.String(10))  # role for admin/user
+    created_at = db.Column(db.DateTime, default=now_time)  # Thêm trường created_at
+    last_login = db.Column(db.DateTime)  # Thêm trường last_login
     
     auctions = db.relationship('Auction', backref='seller', lazy=True)
     bids = db.relationship('Bid', backref='bidder', lazy=True)
@@ -19,6 +31,10 @@ class User(db.Model):
     def __repr__(self):
         return f'<User {self.name}>'
 
+    def update_last_login(self):
+        self.last_login = now_time
+        db.session.commit()
+
 class Auction(db.Model):
     __tablename__ = 'auctions'
 
@@ -26,8 +42,9 @@ class Auction(db.Model):
     start_price = db.Column(db.Float, nullable=False)
     current_price = db.Column(db.Float, default=0)
     
-    end_time = db.Column(db.DateTime, default=datetime.utcnow)
-    status = db.Column(db.String(20), default='ongoing')  # pending, completed
+    end_time = db.Column(db.DateTime, default=now_time)
+    status = db.Column(db.String(20), default='pending')  # pending, completed
+    created_at = db.Column(db.DateTime, default=now_time)
 
     # Quan hệ với người bán và sản phẩm
     seller_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
@@ -48,7 +65,7 @@ class Bid(db.Model):
     amount = db.Column(db.Float)
     auction_id = db.Column(db.Integer, db.ForeignKey('auctions.id'))
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
-    create_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=now_time)
 
     def __repr__(self):
         return f'<Bid {self.amount}>'
@@ -60,8 +77,8 @@ class Product(db.Model):
     name = db.Column(db.String(128), nullable=False)
     description = db.Column(db.Text)
     category = db.Column(db.String(64))
-    create_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=now_time)
+    updated_at = db.Column(db.DateTime, onupdate=now_time)
     location = db.Column(db.String(256), nullable=True)
 
     # Khóa ngoại liên kết với Category
@@ -80,7 +97,7 @@ class ProductImage(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     url = db.Column(db.String(256), nullable=False)
     product_id = db.Column(db.Integer, db.ForeignKey('products.id'), nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=now_time)
 
     def __repr__(self):
         return f'<ProductImage {self.url}>'
@@ -108,8 +125,8 @@ class Transaction(db.Model):
     buyer_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     amount = db.Column(db.Float)
     status = db.Column(db.String(20), default='pending')
-    create_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=now_time)
+    updated_at = db.Column(db.DateTime, onupdate=now_time)
 
     def __repr__(self):
         return f'<Transaction {self.id}>'
@@ -121,7 +138,8 @@ class Notification(db.Model):
     message = db.Column(db.String(256))
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     auction_id = db.Column(db.Integer, db.ForeignKey('auctions.id'))
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=now_time)
+    is_read = db.Column(db.Boolean, default=False)  # Thêm trường này
 
     def __repr__(self):
         return f'<Notification {self.message}>'

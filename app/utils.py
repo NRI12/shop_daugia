@@ -78,3 +78,65 @@ def update_auction_status():
 
         db.session.commit()
         print(f"Phiên đấu giá {auction.id} đã được cập nhật và giao dịch thành công được tạo.")
+
+def get_admin_user(current_user_id):
+    user = User.query.get(current_user_id)
+    if not user or user.role != 'admin':
+        return None
+    return user
+
+def format_user_data(user):
+    return {
+        "id": user.id,
+        "name": user.name,
+        "email": user.email,
+        "phone_number": user.phone_number,
+        "role": user.role,
+        "created_at": user.created_at.strftime("%Y-%m-%d %H:%M:%S") if user.created_at else None,
+        "last_login": user.last_login.strftime("%Y-%m-%d %H:%M:%S") if user.last_login else None
+    }
+
+def get_user_statistics(user_id):
+    total_auctions = Auction.query.filter_by(seller_id=user_id).count()
+    total_bids = Bid.query.filter_by(user_id=user_id).count()
+    total_transactions = Transaction.query.filter_by(buyer_id=user_id).count()
+    return {
+        "total_auctions": total_auctions,
+        "total_bids": total_bids,
+        "total_transactions": total_transactions
+    }
+
+def delete_user_data(user_id):
+    Notification.query.filter_by(user_id=user_id).delete()
+    Bid.query.filter_by(user_id=user_id).delete()
+    Transaction.query.filter_by(buyer_id=user_id).delete()
+
+    auctions = Auction.query.filter_by(seller_id=user_id).all()
+    for auction in auctions:
+        Bid.query.filter_by(auction_id=auction.id).delete()
+        Transaction.query.filter_by(auction_id=auction.id).delete()
+        Notification.query.filter_by(auction_id=auction.id).delete()
+        db.session.delete(auction)
+
+    user = User.query.get(user_id)
+    db.session.delete(user)
+    db.session.commit()
+
+def export_all_users():
+    users_data = []
+    users = User.query.all()
+    for user in users:
+        stats = get_user_statistics(user.id)
+        users_data.append({
+            "ID": user.id,
+            "Tên": user.name,
+            "Email": user.email,
+            "Số điện thoại": user.phone_number or "",
+            "Vai trò": user.role,
+            "Ngày tạo": user.created_at.strftime("%Y-%m-%d %H:%M:%S") if user.created_at else "",
+            "Lần đăng nhập cuối": user.last_login.strftime("%Y-%m-%d %H:%M:%S") if user.last_login else "",
+            "Số phiên đấu giá": stats["total_auctions"],
+            "Số lượt đặt giá": stats["total_bids"],
+            "Số giao dịch": stats["total_transactions"]
+        })
+    return users_data

@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!-- Các thẻ meta và liên kết CSS tương tự như các trang khác -->
+    <title>Admin | Quản lý giao dịch</title>
+    <!-- Bao gồm Bootstrap CSS nếu chưa có -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="layout-fixed sidebar-expand-lg bg-body-tertiary">
+    <div class="app-wrapper">
+        {% include 'admin/header.html' %}
+        {% include 'admin/sidebar.html' %}
+        <div class="container-fluid px-4">
+            <h1 class="mt-4">Quản lý giao dịch</h1>
+
+            <!-- Search and Filter -->
+            <div class="card mb-4">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-md-4">
+                            <div class="input-group">
+                                <input type="text" id="searchInput" class="form-control" 
+                                       placeholder="Tìm kiếm theo tên sản phẩm, người mua..." 
+                                       value="{{ search }}">
+                                <button class="btn btn-primary" type="button" onclick="searchTransactions()">
+                                    <i class="fas fa-search"></i> Tìm kiếm
+                                </button>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <select class="form-select" id="statusFilter" onchange="filterStatus()">
+                                <option value="">Tất cả trạng thái</option>
+                                <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>Chờ xác nhận</option>
+                                <option value="confirmed" {% if status_filter == 'confirmed' %}selected{% endif %}>Đã xác nhận</option>
+                                <option value="canceled" {% if status_filter == 'canceled' %}selected{% endif %}>Đã hủy</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Transactions Table -->
+            <div class="card mb-4">
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-striped">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Sản phẩm</th>
+                                    <th>Người mua</th>
+                                    <th>Số tiền</th>
+                                    <th>Thời gian tạo</th>
+                                    <th>Trạng thái</th>
+                                    <th>Thao tác</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for transaction in transactions.items %}
+                                <tr>
+                                    <td>{{ transaction.id }}</td>
+                                    <td>{{ transaction.auction.product.name }}</td>
+                                    <td>{{ transaction.buyer.name }}</td>
+                                    <td>{{ transaction.amount }}</td>
+                                    <td>
+                                        {% if transaction.created_at %}
+                                            {{ transaction.created_at.strftime("%Y-%m-%d %H:%M:%S") }}
+                                        {% else %}
+                                            N/A
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="badge {% if transaction.status == 'pending' %}bg-warning{% elif transaction.status == 'confirmed' %}bg-success{% else %}bg-danger{% endif %}">
+                                            {{ transaction.status }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <!-- Nút Xem chi tiết -->
+                                        <button class="btn btn-sm btn-info" onclick="viewTransaction({{ transaction.id }})">
+                                            <i class="fas fa-eye"></i> Xem
+                                        </button>
+                                        {% if transaction.status == 'pending' %}
+                                        <!-- Nút Xác nhận -->
+                                        <button class="btn btn-sm btn-success" onclick="confirmTransaction({{ transaction.id }})">
+                                            <i class="fas fa-check"></i> Xác nhận
+                                        </button>
+                                        <!-- Nút Hủy -->
+                                        <button class="btn btn-sm btn-danger" onclick="cancelTransaction({{ transaction.id }})">
+                                            <i class="fas fa-times"></i> Hủy
+                                        </button>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Pagination -->
+                    <nav aria-label="Page navigation">
+                        <ul class="pagination justify-content-center">
+                            {% if transactions.has_prev %}
+                            <li class="page-item">
+                                <a class="page-link" href="{{ url_for('admin_transactions', page=transactions.prev_num, search=search, status=status_filter) }}">
+                                    Previous
+                                </a>
+                            </li>
+                            {% endif %}
+
+                            {% for page_num in transactions.iter_pages(left_edge=2, left_current=2, right_current=2, right_edge=2) %}
+                                {% if page_num %}
+                                    <li class="page-item {% if page_num == transactions.page %}active{% endif %}">
+                                        <a class="page-link" href="{{ url_for('admin_transactions', page=page_num, search=search, status=status_filter) }}">
+                                            {{ page_num }}
+                                        </a>
+                                    </li>
+                                {% else %}
+                                    <li class="page-item disabled"><span class="page-link">...</span></li>
+                                {% endif %}
+                            {% endfor %}
+
+                            {% if transactions.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="{{ url_for('admin_transactions', page=transactions.next_num, search=search, status=status_filter) }}">
+                                    Next
+                                </a>
+                            </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal View Transaction -->
+    <div class="modal fade" id="viewTransactionModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Chi tiết giao dịch</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="viewTransactionContent">
+                        <!-- Nội dung chi tiết giao dịch sẽ được chèn vào đây -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bao gồm Bootstrap JS và các script cần thiết -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Thêm fontawesome nếu cần -->
+    <script src="https://kit.fontawesome.com/your-fontawesome-kit.js" crossorigin="anonymous"></script>
+
+    <!-- Custom Scripts -->
+    <script>
+        function searchTransactions() {
+            const searchValue = document.getElementById('searchInput').value;
+            const statusValue = document.getElementById('statusFilter').value;
+            window.location.href = `{{ url_for('admin_transactions') }}?search=${encodeURIComponent(searchValue)}&status=${encodeURIComponent(statusValue)}`;
+        }
+
+        function filterStatus() {
+            searchTransactions();
+        }
+
+        async function viewTransaction(transactionId) {
+            const token = localStorage.getItem('access_token');
+
+            try {
+                const response = await fetch(`/admin/transactions/${transactionId}`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (response.ok) {
+                    const transactionData = await response.json();
+
+                    let content = `
+                        <table class="table table-bordered">
+                            <tr>
+                                <th>ID</th>
+                                <td>${transactionData.id}</td>
+                            </tr>
+                            <tr>
+                                <th>Sản phẩm</th>
+                                <td>${transactionData.product_name}</td>
+                            </tr>
+                            <tr>
+                                <th>Người mua</th>
+                                <td>${transactionData.buyer_name}</td>
+                            </tr>
+                            <tr>
+                                <th>Số tiền</th>
+                                <td>${transactionData.amount}</td>
+                            </tr>
+                            <tr>
+                                <th>Trạng thái</th>
+                                <td>${transactionData.status}</td>
+                            </tr>
+                            <tr>
+                                <th>Thời gian tạo</th>
+                                <td>${transactionData.created_at}</td>
+                            </tr>
+                            <tr>
+                                <th>Thời gian cập nhật</th>
+                                <td>${transactionData.updated_at}</td>
+                            </tr>
+                            <!-- Thêm các thông tin khác nếu cần -->
+                        </table>
+                    `;
+
+                    document.getElementById('viewTransactionContent').innerHTML = content;
+                    new bootstrap.Modal(document.getElementById('viewTransactionModal')).show();
+                } else {
+                    const errorData = await response.json();
+                    alert(`Không thể lấy thông tin giao dịch: ${errorData.message}`);
+                }
+            } catch (error) {
+                alert('Đã xảy ra lỗi khi lấy thông tin giao dịch');
+                console.error(error);
+            }
+        }
+
+        async function confirmTransaction(transactionId) {
+            if (confirm('Bạn có chắc chắn muốn xác nhận giao dịch này?')) {
+                const token = localStorage.getItem('access_token');
+
+                try {
+                    const response = await fetch(`/admin/transactions/${transactionId}/confirm`, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${token}`
+                        }
+                    });
+
+                    if (response.ok) {
+                        window.location.reload();
+                    } else {
+                        const errorData = await response.json();
+                        alert(`Không thể xác nhận giao dịch: ${errorData.message}`);
+                    }
+                } catch (error) {
+                    alert('Đã xảy ra lỗi khi xác nhận giao dịch');
+                    console.error(error);
+                }
+            }
+        }
+
+        async function cancelTransaction(transactionId) {
+            if (confirm('Bạn có chắc chắn muốn hủy giao dịch này?')) {
+                const token = localStorage.getItem('access_token');
+
+                try {
+                    const response = await fetch(`/admin/transactions/${transactionId}/cancel`, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${token}`
+                        }
+                    });
+
+                    if (response.ok) {
+                        window.location.reload();
+                    } else {
+                        const errorData = await response.json();
+                        alert(`Không thể hủy giao dịch: ${errorData.message}`);
+                    }
+                } catch (error) {
+                    alert('Đã xảy ra lỗi khi hủy giao dịch');
+                    console.error(error);
+                }
+            }
+        }
+    </script>
+</body>
+</html>

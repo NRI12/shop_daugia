@@ -288,6 +288,10 @@
                             {{ auction.product.location }}
                         </span>
                     </div>
+                    <div class="bidder-info">
+                        <p><strong>Số người tham gia đấu thầu:</strong> {{ unique_bidders }}</p>
+                    </div>
+                    
                 </div>
 
                 <div class="description">
@@ -297,10 +301,8 @@
                     Kết thúc: {{ auction.end_time.strftime('%d/%m/%Y %H:%M') }}
                 </div>
 
-                {% if auction.status == 'completed' and winner %}
+                {% if auction.status == 'completed'%}
                     <div class="winner-info">
-                        <h3>Người thắng đấu giá</h3>
-                        <p>{{ winner.name }}</p>
                         <p>Giá thắng: {{ "{:,.0f}".format(auction.current_price) }} VND</p>
                     </div>
                 {% else %}
@@ -484,7 +486,5 @@
         });
     </script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.4/socket.io.min.js" integrity="sha384-Cw2ZL96fJv1gXqg0pZpVvJ+v+UqN0Bz8ZdK3AmJNoOzbVnPkv3IbbJJoP7fVnZ1" crossorigin="anonymous"></script>
-
-
 </body>
 </html>

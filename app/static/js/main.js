@@ -59,16 +59,16 @@ function setupFormValidation() {
 
 function setupAuthForms() {
     // Login form submission
-    document.getElementById('loginForm').addEventListener('submit', async function(e) {
+    document.getElementById('loginForm').addEventListener('submit', async function (e) {
         e.preventDefault();
-        
+    
         if (!validateForm(this)) return;
-
+    
         const formData = {
             email: document.getElementById('loginEmail').value,
             password: document.getElementById('loginPassword').value
         };
-
+    
         try {
             const response = await fetch('/login', {
                 method: 'POST',
@@ -76,12 +76,20 @@ function setupAuthForms() {
                 credentials: 'include',
                 body: JSON.stringify(formData)
             });
-
+    
             const data = await response.json();
+    
             if (response.ok) {
-                updateUIForLoggedInUser(data.user);
-                $('#authModal').modal('hide');
-                showToast('success', 'Đăng nhập thành công!');
+                localStorage.setItem('jwt_token', data.access_token); // Lưu token vào localStorage
+    
+                // Kiểm tra vai trò của người dùng
+                if (data.user.role === 'admin') {
+                    window.location.href = '/admin'; // Chuyển hướng đến trang admin
+                } else {
+                    updateUIForLoggedInUser(data.user); // Cập nhật UI nếu là user thường
+                    $('#authModal').modal('hide');
+                    showToast('success', 'Đăng nhập thành công!');
+                }
             } else {
                 showToast('error', data.message || 'Đăng nhập thất bại!');
             }
@@ -90,6 +98,7 @@ function setupAuthForms() {
             showToast('error', 'Có lỗi xảy ra. Vui lòng thử lại sau.');
         }
     });
+    
 
     // Register form submission
     document.getElementById('registerForm').addEventListener('submit', async function(e) {
@@ -158,11 +167,15 @@ async function checkAuthStatus() {
             method: 'GET',
             credentials: 'include'
         });
-        
+
         if (response.ok) {
             const data = await response.json();
             if (data.authenticated) {
-                updateUIForLoggedInUser(data.user);
+                if (data.user.role === 'admin') {
+                    window.location.href = '/admin'; 
+                } else {
+                    updateUIForLoggedInUser(data.user);
+                }
             } else {
                 resetAuthUI();
             }
@@ -174,6 +187,7 @@ async function checkAuthStatus() {
         resetAuthUI();
     }
 }
+
 
 function resetAuthUI() {
     document.getElementById('welcomeText').style.display = 'none';
@@ -213,6 +227,5 @@ async function handleLogout() {
         alert("Có lỗi xảy ra khi đăng xuất.");
     }
 }
-
 
 

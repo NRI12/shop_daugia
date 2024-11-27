@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!-- Các thẻ meta và liên kết CSS tương tự như các trang khác -->
+    <title>Admin | Quản lý đấu giá</title>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.min.js"></script>
+    
+</head>
+<body class="layout-fixed sidebar-expand-lg bg-body-tertiary">
+    <div class="app-wrapper">
+        {% include 'admin/header.html' %}
+        {% include 'admin/sidebar.html' %}
+        <div class="container-fluid px-4">
+            <h1 class="mt-4">Quản lý đấu giá</h1>
+
+            <!-- Search and Filter -->
+            <div class="card mb-4">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-md-4">
+                            <div class="input-group">
+                                <input type="text" id="searchInput" class="form-control" 
+                                       placeholder="Tìm kiếm theo tên sản phẩm, người bán..." 
+                                       value="{{ search }}">
+                                <button class="btn btn-primary" type="button" onclick="searchAuctions()">
+                                    <i class="fas fa-search"></i> Tìm kiếm
+                                </button>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <select class="form-select" id="statusFilter" onchange="filterStatus()">
+                                <option value="">Tất cả trạng thái</option>
+                                <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>Chờ phê duyệt</option>
+                                <option value="ongoing" {% if status_filter == 'ongoing' %}selected{% endif %}>Đang diễn ra</option>
+                                <option value="completed" {% if status_filter == 'completed' %}selected{% endif %}>Đã kết thúc</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Auctions Table -->
+            <div class="card mb-4">
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-striped">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Sản phẩm</th>
+                                    <th>Người bán</th>
+                                    <th>Giá khởi điểm</th>
+                                    <th>Thời gian bắt đầu</th>
+                                    <th>Thời gian kết thúc</th>
+                                    <th>Trạng thái</th>
+                                    <th>Thao tác</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for auction in auctions.items %}
+                                <tr>
+                                    <td>{{ auction.id }}</td>
+                                    <td>{{ auction.product.name }}</td>
+                                    <td>{{ auction.seller.name }}</td>
+                                    <td>{{ auction.start_price }}</td>
+                                    <td>{{ auction.created_at.strftime("%Y-%m-%d %H:%M:%S") }}</td>
+                                    <td>{{ auction.end_time.strftime("%Y-%m-%d %H:%M:%S") }}</td>
+                                    <td>
+                                        <span class="badge {% if auction.status == 'pending' %}bg-warning{% elif auction.status == 'ongoing' %}bg-success{% else %}bg-secondary{% endif %}">
+                                            {{ auction.status }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                         <!-- Nút Phê duyệt cho phiên đấu giá đang chờ -->
+                                         {% if auction.status == 'pending' %}
+                                         <button class="btn btn-sm btn-success" onclick="approveAuction({{ auction.id }})">
+                                             <i class="fas fa-check"></i> Phê duyệt
+                                         </button>
+                                         {% endif %}
+                                         <!-- Nút Xem chi tiết -->
+                                         <button class="btn btn-sm btn-info" onclick="viewAuction({{ auction.id }})">
+                                             <i class="fas fa-eye"></i> Xem
+                                         </button>
+                                         <!-- Nút Chỉnh sửa -->
+                                         <button class="btn btn-sm btn-warning" onclick="editAuction({{ auction.id }})">
+                                             <i class="fas fa-edit"></i> Sửa
+                                         </button>
+                                         <!-- Nút Xóa -->
+                                         <button class="btn btn-sm btn-danger" onclick="deleteAuction({{ auction.id }})">
+                                             <i class="fas fa-trash"></i> Xóa
+                                         </button>
+                                    </td>
+                                    <td>
+                                    
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Pagination -->
+                    <nav aria-label="Page navigation">
+                        <ul class="pagination justify-content-center">
+                            {% if auctions.has_prev %}
+                            <li class="page-item">
+                                <a class="page-link" href="{{ url_for('admin_auctions', page=auctions.prev_num, search=search, status=status_filter) }}">
+                                    Previous
+                                </a>
+                            </li>
+                            {% endif %}
+
+                            {% for page_num in auctions.iter_pages(left_edge=2, left_current=2, right_current=2, right_edge=2) %}
+                                {% if page_num %}
+                                    <li class="page-item {% if page_num == auctions.page %}active{% endif %}">
+                                        <a class="page-link" href="{{ url_for('admin_auctions', page=page_num, search=search, status=status_filter) }}">
+                                            {{ page_num }}
+                                        </a>
+                                    </li>
+                                {% else %}
+                                    <li class="page-item disabled"><span class="page-link">...</span></li>
+                                {% endif %}
+                            {% endfor %}
+
+                            {% if auctions.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="{{ url_for('admin_auctions', page=auctions.next_num, search=search, status=status_filter) }}">
+                                    Next
+                                </a>
+                            </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </div>
+        <!-- View Auction Modal -->
+    <div class="modal fade" id="viewAuctionModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Chi tiết phiên đấu giá</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="viewAuctionContent">
+                        <!-- Nội dung chi tiết phiên đấu giá sẽ được chèn vào đây -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Auction Modal -->
+    <div class="modal fade" id="editAuctionModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Chỉnh sửa phiên đấu giá</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="editAuctionForm">
+                        <input type="hidden" id="editAuctionId">
+                        <div class="mb-3">
+                            <label class="form-label">Giá khởi điểm</label>
+                            <input type="number" class="form-control" id="editStartPrice" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Thời gian kết thúc</label>
+                            <input type="datetime-local" class="form-control" id="editEndTime" required>
+                        </div>
+                        <!-- Thêm các trường cần chỉnh sửa khác nếu cần -->
+                        <div class="text-end">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                            <button type="submit" class="btn btn-primary">Lưu thay đổi</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Auction Confirmation Modal -->
+    <div class="modal fade" id="deleteAuctionModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Xóa phiên đấu giá</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Bạn có chắc chắn muốn xóa phiên đấu giá này không?</p>
+                    <div class="text-end">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                        <button type="button" class="btn btn-danger" id="confirmDeleteAuction">Xóa</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function searchAuctions() {
+            const searchValue = document.getElementById('searchInput').value;
+            const statusValue = document.getElementById('statusFilter').value;
+            window.location.href = `{{ url_for('admin_auctions') }}?search=${encodeURIComponent(searchValue)}&status=${encodeURIComponent(statusValue)}`;
+        }
+    
+        function filterStatus() {
+            searchAuctions();
+        }
+    
+        async function approveAuction(auctionId) {
+            if (confirm('Bạn có chắc chắn muốn phê duyệt phiên đấu giá này?')) {
+                const token = localStorage.getItem('access_token'); // Lấy token JWT
+    
+                try {
+                    const response = await fetch(`/admin/auctions/${auctionId}/approve`, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${token}`
+                        }
+                    });
+    
+                    if (response.ok) {
+                        window.location.reload();
+                    } else {
+                        const errorData = await response.json();
+                        alert(`Không thể phê duyệt phiên đấu giá: ${errorData.message}`);
+                    }
+                } catch (error) {
+                    alert('Đã xảy ra lỗi khi phê duyệt phiên đấu giá');
+                    console.error(error);
+                }
+            }
+        }
+    
+        async function viewAuction(auctionId) {
+            const token = localStorage.getItem('access_token');
+    
+            try {
+                const response = await fetch(`/admin/auctions/${auctionId}`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+    
+                if (response.ok) {
+                    const auctionData = await response.json();
+    
+                    let content = `
+                        <table class="table table-bordered">
+                            <tr>
+                                <th>ID</th>
+                                <td>${auctionData.id}</td>
+                            </tr>
+                            <tr>
+                                <th>Sản phẩm</th>
+                                <td>${auctionData.product}</td>
+                            </tr>
+                            <tr>
+                                <th>Người bán</th>
+                                <td>${auctionData.seller}</td>
+                            </tr>
+                            <tr>
+                                <th>Giá khởi điểm</th>
+                                <td>${auctionData.start_price}</td>
+                            </tr>
+                            <tr>
+                                <th>Giá hiện tại</th>
+                                <td>${auctionData.current_price}</td>
+                            </tr>
+                            <tr>
+                                <th>Thời gian bắt đầu</th>
+                                <td>${auctionData.created_at}</td>
+                            </tr>
+                            <tr>
+                                <th>Thời gian kết thúc</th>
+                                <td>${auctionData.end_time}</td>
+                            </tr>
+                            <tr>
+                                <th>Trạng thái</th>
+                                <td>${auctionData.status}</td>
+                            </tr>
+                            <!-- Thêm các thông tin khác nếu cần -->
+                        </table>
+                    `;
+    
+                    document.getElementById('viewAuctionContent').innerHTML = content;
+                    new bootstrap.Modal(document.getElementById('viewAuctionModal')).show();
+                } else {
+                    const errorData = await response.json();
+                    alert(`Không thể lấy thông tin phiên đấu giá: ${errorData.message}`);
+                }
+            } catch (error) {
+                alert('Đã xảy ra lỗi khi lấy thông tin phiên đấu giá');
+                console.error(error);
+            }
+        }
+    
+        async function editAuction(auctionId) {
+            const token = localStorage.getItem('access_token');
+    
+            try {
+                const response = await fetch(`/admin/auctions/${auctionId}`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+    
+                if (response.ok) {
+                    const auctionData = await response.json();
+    
+                    document.getElementById('editAuctionId').value = auctionData.id;
+                    document.getElementById('editStartPrice').value = auctionData.start_price;
+                    document.getElementById('editEndTime').value = auctionData.end_time_local; // Sẽ giải thích bên dưới
+    
+                    new bootstrap.Modal(document.getElementById('editAuctionModal')).show();
+                } else {
+                    const errorData = await response.json();
+                    alert(`Không thể lấy thông tin phiên đấu giá: ${errorData.message}`);
+                }
+            } catch (error) {
+                alert('Đã xảy ra lỗi khi lấy thông tin phiên đấu giá');
+                console.error(error);
+            }
+        }
+    
+        document.getElementById('editAuctionForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+    
+            const auctionId = document.getElementById('editAuctionId').value;
+            const startPrice = document.getElementById('editStartPrice').value;
+            const endTime = document.getElementById('editEndTime').value;
+    
+            const auctionData = {
+                start_price: parseFloat(startPrice),
+                end_time: endTime
+            };
+    
+            const token = localStorage.getItem('access_token');
+    
+            try {
+                const response = await fetch(`/admin/auctions/${auctionId}/edit`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify(auctionData)
+                });
+    
+                if (response.ok) {
+                    window.location.reload();
+                } else {
+                    const errorData = await response.json();
+                    alert(`Không thể cập nhật phiên đấu giá: ${errorData.message}`);
+                }
+            } catch (error) {
+                alert('Đã xảy ra lỗi khi cập nhật phiên đấu giá');
+                console.error(error);
+            }
+        });
+    
+        async function deleteAuction(auctionId) {
+            // Hiển thị modal xác nhận xóa
+            const deleteModal = new bootstrap.Modal(document.getElementById('deleteAuctionModal'));
+            deleteModal.show();
+    
+            // Gán sự kiện cho nút xác nhận xóa
+            document.getElementById('confirmDeleteAuction').onclick = async function() {
+                const token = localStorage.getItem('access_token');
+    
+                try {
+                    const response = await fetch(`/admin/auctions/${auctionId}`, {
+                        method: 'DELETE',
+                        headers: {
+                            'Authorization': `Bearer ${token}`
+                        }
+                    });
+    
+                    if (response.ok) {
+                        window.location.reload();
+                    } else {
+                        const errorData = await response.json();
+                        alert(`Không thể xóa phiên đấu giá: ${errorData.message}`);
+                    }
+                } catch (error) {
+                    alert('Đã xảy ra lỗi khi xóa phiên đấu giá');
+                    console.error(error);
+                }
+            };
+        }
+    </script>
+</body>
+</html>

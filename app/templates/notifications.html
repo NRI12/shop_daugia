@@ -1,0 +1,326 @@
+{% include 'layout/header.html' %}
+
+<div class="notifications-page container py-5">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0">Thông báo của bạn</h4>
+                    <div class="btn-group">
+                        <button class="btn btn-outline-primary mark-all-read">Đánh dấu tất cả đã đọc</button>
+                        <button class="btn btn-outline-danger delete-all">Xóa tất cả</button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="notification-filters mb-3">
+                        <div class="btn-group">
+                            <button class="btn btn-outline-secondary active" data-filter="all">Tất cả</button>
+                            <button class="btn btn-outline-secondary" data-filter="unread">Chưa đọc</button>
+                            <button class="btn btn-outline-secondary" data-filter="auction">Đấu giá</button>
+                            <button class="btn btn-outline-secondary" data-filter="system">Hệ thống</button>
+                        </div>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-hover notification-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 50px;">
+                                        <input type="checkbox" class="select-all-checkbox">
+                                    </th>
+                                    <th style="width: 100px">Trạng thái</th>
+                                    <th>Nội dung</th>
+                                    <th style="width: 200px">Thời gian</th>
+                                    <th style="width: 100px">Thao tác</th>
+                                </tr>
+                            </thead>
+                            <tbody id="notificationsList">
+                                <!-- Notifications will be loaded here -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <div id="emptyNotifications" class="text-center py-5 d-none">
+                        <i class="fa fa-bell-slash fa-3x text-muted mb-3"></i>
+                        <h5>Không có thông báo nào</h5>
+                    </div>
+                    <div id="loadingNotifications" class="text-center py-5">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.notifications-page .card {
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+}
+
+.notification-table tr {
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.notification-table tr:hover {
+    background-color: #f8f9fa;
+}
+
+.notification-table .unread {
+    background-color: #f0f7ff;
+}
+
+.notification-status {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 5px;
+}
+
+.notification-status.unread {
+    background-color: #0d6efd;
+}
+
+.notification-status.read {
+    background-color: #6c757d;
+}
+
+.notification-time {
+    color: #6c757d;
+    font-size: 0.9rem;
+}
+
+.notification-actions {
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.notification-table tr:hover .notification-actions {
+    opacity: 1;
+}
+
+.btn-group .btn:focus {
+    box-shadow: none;
+}
+</style>
+<script>
+    // Global variable to store notifications
+let notifications = [];
+
+// Global functions for notifications
+function markAsRead(notificationId) {
+    const token = localStorage.getItem('jwt_token');
+    fetch(`/api/notifications/${notificationId}/read`, {
+        method: 'PUT',
+        headers: {
+            'Authorization': `Bearer ${token}`
+        }
+    })
+    .then(response => {
+        if (response.ok) {
+            // Update notifications in the current view
+            notifications = notifications.map(n => 
+                n.id === notificationId ? {...n, is_read: true} : n
+            );
+            renderNotifications();
+            updateNotificationCount();
+        }
+    })
+    .catch(error => {
+        console.error('Error marking notification as read:', error);
+        showErrorToast('Không thể đánh dấu thông báo. Vui lòng thử lại.');
+    });
+}
+
+function deleteNotification(notificationId) {
+    if (!confirm('Bạn có chắc chắn muốn xóa thông báo này?')) return;
+
+    const token = localStorage.getItem('jwt_token');
+    fetch(`/api/notifications/${notificationId}`, {
+        method: 'DELETE',
+        headers: {
+            'Authorization': `Bearer ${token}`
+        }
+    })
+    .then(response => {
+        if (response.ok) {
+            // Update notifications in the current view
+            notifications = notifications.filter(n => n.id !== notificationId);
+            renderNotifications();
+            updateNotificationCount();
+        }
+    })
+    .catch(error => {
+        console.error('Error deleting notification:', error);
+        showErrorToast('Không thể xóa thông báo. Vui lòng thử lại.');
+    });
+}
+
+// Placeholder functions for toast notifications
+function showErrorToast(message) {
+    console.error(message);
+    // Implement actual toast notification
+}
+
+function showSuccessToast(message) {
+    console.log(message);
+    // Implement actual toast notification
+}
+
+// Placeholder for updateNotificationCount
+function updateNotificationCount() {
+    console.log('Updating notification count');
+}
+
+// Render notifications function (made global)
+function renderNotifications() {
+    const notificationsTable = document.getElementById('notificationsList');
+    const emptyState = document.getElementById('emptyNotifications');
+    const filteredNotifications = filterNotifications(notifications);
+    
+    if (filteredNotifications.length === 0) {
+        emptyState.classList.remove('d-none');
+        notificationsTable.innerHTML = '';
+        return;
+    }
+
+    emptyState.classList.add('d-none');
+    notificationsTable.innerHTML = filteredNotifications.map(notification => `
+        <tr class="${notification.is_read ? '' : 'unread'}" data-id="${notification.id}">
+            <td>
+                <input type="checkbox" class="notification-checkbox">
+            </td>
+            <td>
+                <span class="notification-status ${notification.is_read ? 'read' : 'unread'}"></span>
+                ${notification.is_read ? 'Đã đọc' : 'Chưa đọc'}
+            </td>
+            <td>${notification.message}</td>
+            <td class="notification-time">${formatDate(notification.created_at)}</td>
+            <td>
+                <div class="notification-actions">
+                    <button class="btn btn-sm btn-link mark-read-btn" 
+                            onclick="markAsRead(${notification.id})">
+                        <i class="fa fa-check"></i>
+                    </button>
+                    <button class="btn btn-sm btn-link delete-btn" 
+                            onclick="deleteNotification(${notification.id})">
+                        <i class="fa fa-trash"></i>
+                    </button>
+                </div>
+            </td>
+        </tr>
+    `).join('');
+
+    // Add click handlers for rows
+    document.querySelectorAll('.notification-table tr[data-id]').forEach(row => {
+        row.addEventListener('click', (e) => {
+            if (!e.target.closest('button') && !e.target.closest('input')) {
+                const notification = notifications.find(n => n.id === parseInt(row.dataset.id));
+                if (notification.auction_id) {
+                    window.location.href = `/product/${notification.auction_id}`;
+                }
+            }
+        });
+    });
+}
+
+// Format date helper (made global)
+function formatDate(dateString) {
+    const date = new Date(dateString);
+    return new Intl.DateTimeFormat('vi-VN', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    }).format(date);
+}
+
+// Filter notifications function (made global)
+function filterNotifications(notifications) {
+    const currentFilter = document.querySelector('.notification-filters .active').dataset.filter;
+    switch (currentFilter) {
+        case 'unread':
+            return notifications.filter(n => !n.is_read);
+        case 'auction':
+            return notifications.filter(n => n.auction_id);
+        case 'system':
+            return notifications.filter(n => !n.auction_id);
+        default:
+            return notifications;
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Fetch notifications
+    function fetchNotifications() {
+        const token = localStorage.getItem('jwt_token');
+        const loadingState = document.getElementById('loadingNotifications');
+        const emptyState = document.getElementById('emptyNotifications');
+
+        loadingState.classList.remove('d-none');
+        emptyState.classList.add('d-none');
+
+        fetch('/api/notifications', {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        })
+        .then(data => {
+            notifications = data;
+            renderNotifications();
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showErrorToast('Không thể tải thông báo. Vui lòng thử lại sau.');
+        })
+        .finally(() => {
+            loadingState.classList.add('d-none');
+        });
+    }
+
+    // Event listeners for filter buttons
+    document.querySelectorAll('.notification-filters button').forEach(button => {
+        button.addEventListener('click', () => {
+            document.querySelector('.notification-filters .active').classList.remove('active');
+            button.classList.add('active');
+            renderNotifications();
+        });
+    });
+
+    // Mark all as read
+    document.querySelector('.mark-all-read').addEventListener('click', async () => {
+        const token = localStorage.getItem('jwt_token');
+        try {
+            const response = await fetch('/api/notifications/mark-all-read', {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+            
+            if (response.ok) {
+                notifications = notifications.map(n => ({...n, is_read: true}));
+                renderNotifications();
+                updateNotificationCount();
+                showSuccessToast('Đã đánh dấu tất cả là đã đọc');
+            }
+        } catch (error) {
+            console.error('Error marking all as read:', error);
+            showErrorToast('Không thể đánh dấu tất cả đã đọc. Vui lòng thử lại.');
+        }
+    });
+
+    // Initialize
+    fetchNotifications();
+});
+</script>
